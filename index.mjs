@@ -1,53 +1,40 @@
 import express from "express";
-import cors from "cors";
-import bodyParser from "body-parser";
 import { OpenAI } from "openai";
 import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
 
 dotenv.config();
 
 const app = express();
-app.use(cors());
-app.use(bodyParser.json());
+const port = process.env.PORT || 10000;
 
-// Inicializa OpenAI
 const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-const PORT = process.env.PORT || 10000;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-// 🧠 Ruta principal
+app.use(express.json());
+app.use(express.static(path.join(__dirname, "public")));
+
+// ✅ Página principal del chat (HTML)
 app.get("/", (req, res) => {
-  res.send(`
-    <h1>🤖 Alejandro iA - Chatbot operativo</h1>
-    <p>Visita <a href="/qr">/qr</a> para vincular WhatsApp Business</p>
-    <p><b>Comandos supervisor:</b> @ia on | @ia off | @ia estado</p>
-  `);
+  res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-// 💬 Endpoint principal del chat
-app.post("/api/chat", async (req, res) => {
+// 💬 Endpoint del chatbot
+app.post("/chat", async (req, res) => {
+  const { message } = req.body;
+  if (!message || message.trim() === "")
+    return res.status(400).json({ error: "Mensaje vacío" });
+
   try {
-    const { message } = req.body;
-
-    if (!message || message.trim() === "") {
-      return res.status(400).json({ error: "Mensaje vacío" });
-    }
-
-    console.log("📩 Mensaje recibido:", message);
-
-    // Crea un hilo de conversación
     const thread = await client.beta.threads.create({
-      messages: [
-        {
-          role: "user",
-          content: message,
-        },
-      ],
+      messages: [{ role: "user", content: message }],
     });
 
-    // Ejecuta el asistente personalizado (Alejandro iA)
     const run = await client.beta.threads.runs.createAndPoll(thread.id, {
       assistant_id: "asst_fUNT2sPlWS7LYmNqrU9uHKoU",
     });
@@ -55,21 +42,19 @@ app.post("/api/chat", async (req, res) => {
     if (run.status === "completed") {
       const messages = await client.beta.threads.messages.list(thread.id);
       const respuesta = messages.data[0].content[0].text.value;
-      console.log("🤖 Respuesta (Alejandro iA):", respuesta);
       res.json({ reply: respuesta });
     } else {
       res.json({
         reply:
-          "Estoy procesando tu mensaje, por favor intenta de nuevo en unos segundos.",
+          "Alejandro iA está procesando tu mensaje, por favor intenta de nuevo.",
       });
     }
-  } catch (error) {
-    console.error("❌ Error en /api/chat:", error);
-    res.status(500).json({ error: "Error interno del servidor" });
+  } catch (err) {
+    console.error("❌ Error:", err);
+    res.status(500).json({ error: "Error al conectar con Alejandro iA." });
   }
 });
 
-// 🔗 Puerto
-app.listen(PORT, () => {
-  console.log(`🚀 Servidor de Alejandro iA corriendo en puerto ${PORT}`);
+app.listen(port, () => {
+  console.log(`🌞 WebChat de Alejandro iA activo en puerto ${port}`);
 });
