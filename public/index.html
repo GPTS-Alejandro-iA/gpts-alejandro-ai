@@ -70,6 +70,16 @@
       backdrop-filter: blur(4px);
     }
 
+    .msg.bot a {
+      color: #00bcd4;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .msg.bot a:hover {
+      text-decoration: underline;
+    }
+
     .chat-input {
       display: flex;
       background: rgba(0,0,0,0.6);
@@ -136,6 +146,19 @@
     const userInput = document.getElementById("userInput");
     const sendBtn = document.getElementById("sendBtn");
 
+    // 🧠 Convierte URLs en enlaces clicables con formato bonito
+    function linkify(text) {
+      const urlPattern = /(https?:\/\/[^\s]+)/g;
+      return text.replace(urlPattern, url => {
+        try {
+          const hostname = new URL(url).hostname.replace("www.", "");
+          return `<a href="${url}" target="_blank" rel="noopener noreferrer">🔗 ${hostname}</a>`;
+        } catch {
+          return url;
+        }
+      });
+    }
+
     async function sendMessage() {
       const message = userInput.value.trim();
       if (!message) return;
@@ -157,7 +180,11 @@
         const data = await response.json();
         const botMsg = document.createElement("div");
         botMsg.className = "msg bot";
-        botMsg.textContent = data.reply || "Lo siento, hubo un error al responder.";
+
+        // 🪄 Aplica la función linkify para embellecer enlaces
+        const formatted = linkify(data.reply || "Lo siento, hubo un error al responder.");
+        botMsg.innerHTML = formatted;
+
         chatWindow.appendChild(botMsg);
         chatWindow.scrollTop = chatWindow.scrollHeight;
       } catch (error) {
@@ -177,4 +204,3 @@
 
 </body>
 </html>
-
