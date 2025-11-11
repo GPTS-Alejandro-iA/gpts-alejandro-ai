@@ -1,60 +1,82 @@
 import express from "express";
-import { OpenAI } from "openai";
-import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
-
-dotenv.config();
-
-const app = express();
-const port = process.env.PORT || 10000;
-
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+import OpenAI from "openai";
+import bodyParser from "body-parser";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-app.use(express.json());
+const app = express();
 app.use(express.static(path.join(__dirname, "public")));
+app.use(bodyParser.json());
 
-// ✅ Página principal del chat (HTML)
+// --- Configura tu asistente real ---
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
+const ASSISTANT_ID = "asst_fUNT2sPlWS7LYmNqrU9uHKoU"; // <--- Tu asistente real
+
+// --- Endpoint principal del chat ---
+app.post("/chat", async (req, res) => {
+  try {
+    const { message, thread_id } = req.body;
+
+    let thread = thread_id;
+
+    if (!thread) {
+      const threadResponse = await openai.beta.threads.create();
+      thread = threadResponse.id;
+    }
+
+    // Añadimos el mensaje del usuario al hilo
+    await openai.beta.threads.messages.create(thread, {
+      role: "user",
+      content: message,
+    });
+
+    // Ejecutamos el asistente
+    const run = await openai.beta.threads.runs.create(thread, {
+      assistant_id: ASSISTANT_ID,
+    });
+
+    // Esperamos la respuesta del asistente
+    let completed = false;
+    let output = "";
+
+    while (!completed) {
+      const runStatus = await openai.beta.threads.runs.retrieve(thread, run.id);
+
+      if (runStatus.status === "completed") {
+        const messages = await openai.beta.threads.messages.list(thread);
+        const last = messages.data[0];
+        output = last.content[0].text.value;
+        completed = true;
+      } else if (
+        ["failed", "expired", "cancelled"].includes(runStatus.status)
+      ) {
+        completed = true;
+        output = "Lo siento, algo falló en la respuesta del asistente 😔";
+      } else {
+        await new Promise((r) => setTimeout(r, 1500));
+      }
+    }
+
+    res.json({ reply: output, thread_id: thread });
+  } catch (err) {
+    console.error("❌ Error en /chat:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// --- Servir HTML ---
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-// 💬 Endpoint del chatbot
-app.post("/chat", async (req, res) => {
-  const { message } = req.body;
-  if (!message || message.trim() === "")
-    return res.status(400).json({ error: "Mensaje vacío" });
-
-  try {
-    const thread = await client.beta.threads.create({
-      messages: [{ role: "user", content: message }],
-    });
-
-    const run = await client.beta.threads.runs.createAndPoll(thread.id, {
-      assistant_id: "asst_fUNT2sPlWS7LYmNqrU9uHKoU",
-    });
-
-    if (run.status === "completed") {
-      const messages = await client.beta.threads.messages.list(thread.id);
-      const respuesta = messages.data[0].content[0].text.value;
-      res.json({ reply: respuesta });
-    } else {
-      res.json({
-        reply:
-          "Alejandro iA está procesando tu mensaje, por favor intenta de nuevo.",
-      });
-    }
-  } catch (err) {
-    console.error("❌ Error:", err);
-    res.status(500).json({ error: "Error al conectar con Alejandro iA." });
-  }
-});
-
-app.listen(port, () => {
-  console.log(`🌞 WebChat de Alejandro iA activo en puerto ${port}`);
+// --- Inicia el servidor ---
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, () => {
+  console.log(`🌞 WebChat de Alejandro iA activo en puerto ${PORT}`);
 });
