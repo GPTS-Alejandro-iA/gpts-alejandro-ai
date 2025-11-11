@@ -1,19 +1,20 @@
 {
   "name": "alejandro-ia-proxy",
   "version": "1.0.0",
-  "description": "Proxy API para Alejandro iA conectado a OpenAI",
+  "description": "Servidor proxy de Alejandro iA - Green Power Tech Store",
   "main": "index.mjs",
   "type": "module",
   "scripts": {
     "start": "node index.mjs"
   },
   "dependencies": {
-    "express": "^4.21.2",
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.0",
     "body-parser": "^1.20.2",
-    "dotenv": "^16.4.5",
-    "openai": "^4.60.1"
+    "node-fetch": "^3.3.2"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=18"
   }
 }
