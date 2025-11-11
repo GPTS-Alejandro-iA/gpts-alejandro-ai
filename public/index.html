@@ -30,9 +30,9 @@
 
     .chat-header {
       text-align: center;
-      padding: 20px;
+      padding: 18px;
       background: rgba(0,0,0,0.5);
-      font-size: 1.3rem;
+      font-size: 1.2rem;
       font-weight: 600;
       letter-spacing: 0.5px;
     }
@@ -49,12 +49,13 @@
     }
 
     .msg {
-      padding: 10px 15px;
+      padding: 9px 13px;
       border-radius: 15px;
-      max-width: 80%;
-      line-height: 1.4;
+      max-width: 85%;
+      line-height: 1.45;
       word-wrap: break-word;
       white-space: pre-wrap;
+      font-size: 0.93rem;
     }
 
     .msg.user {
@@ -74,6 +75,7 @@
       color: #00bcd4;
       text-decoration: none;
       font-weight: 600;
+      word-break: break-all;
     }
 
     .msg.bot a:hover {
@@ -116,6 +118,11 @@
     .chat-input button:hover {
       background: #00a2b5;
     }
+
+    @media (max-width: 480px) {
+      .msg { font-size: 0.85rem; }
+      .chat-header { font-size: 1rem; }
+    }
   </style>
 
   <div class="chat-header">
@@ -146,13 +153,14 @@
     const userInput = document.getElementById("userInput");
     const sendBtn = document.getElementById("sendBtn");
 
-    // 🧠 Convierte URLs en enlaces clicables con formato bonito
+    // ✨ Mejorada: convierte URLs en enlaces válidos y bonitos
     function linkify(text) {
-      const urlPattern = /(https?:\/\/[^\s]+)/g;
-      return text.replace(urlPattern, url => {
+      const urlPattern = /(https?:\/\/[^\s)]+)/g;
+      return text.replace(urlPattern, (url) => {
         try {
-          const hostname = new URL(url).hostname.replace("www.", "");
-          return `<a href="${url}" target="_blank" rel="noopener noreferrer">🔗 ${hostname}</a>`;
+          const cleanUrl = url.replace(/[),.]+$/, ""); // quita ) o . finales
+          const hostname = new URL(cleanUrl).hostname.replace("www.", "");
+          return `<a href="${cleanUrl}" target="_blank" rel="noopener noreferrer">🔗 ${hostname}</a>`;
         } catch {
           return url;
         }
@@ -181,7 +189,6 @@
         const botMsg = document.createElement("div");
         botMsg.className = "msg bot";
 
-        // 🪄 Aplica la función linkify para embellecer enlaces
         const formatted = linkify(data.reply || "Lo siento, hubo un error al responder.");
         botMsg.innerHTML = formatted;
 
