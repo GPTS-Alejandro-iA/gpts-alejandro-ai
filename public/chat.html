@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Alejandro iA - Chat Asesor Solar</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(180deg, #0b1f14, #1a3c29);
+      background-image: url('https://images.unsplash.com/photo-1600585154526-990dced4db0d?auto=format&fit=crop&w=1920&q=80');
+      background-size: cover;
+      background-position: center;
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      backdrop-filter: blur(4px);
+    }
+    .chat-container {
+      width: 380px;
+      height: 540px;
+      background-color: rgba(0, 0, 0, 0.6);
+      border-radius: 20px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.4);
+    }
+    .header {
+      background-color: rgba(25, 150, 80, 0.9);
+      padding: 16px;
+      text-align: center;
+      font-size: 1.2em;
+      font-weight: bold;
+    }
+    .messages {
+      flex: 1;
+      padding: 16px;
+      overflow-y: auto;
+    }
+    .message {
+      margin-bottom: 12px;
+      line-height: 1.4em;
+    }
+    .bot {
+      text-align: left;
+    }
+    .user {
+      text-align: right;
+    }
+    .input-area {
+      display: flex;
+      border-top: 1px solid rgba(255,255,255,0.2);
+    }
+    input {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      outline: none;
+      font-size: 1em;
+      background-color: transparent;
+      color: white;
+    }
+    input::placeholder {
+      color: #fff;
+      opacity: 0.7;
+    }
+    button {
+      background-color: #1fb26b;
+      border: none;
+      color: white;
+      padding: 0 20px;
+      font-size: 1em;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    button:hover {
+      background-color: #1d965c;
+    }
+  </style>
+</head>
+<body>
+  <div class="chat-container">
+    <div class="header">🤖 Alejandro iA</div>
+    <div class="messages" id="messages">
+      <div class="message bot">¡Hola! 👋 Soy <b>Alejandro iA</b>, tu asesor virtual de <b>Green Power Tech Store</b>.<br><br>
+        Puedo orientarte sobre sistemas solares, soluciones de respaldo de energía, opciones de financiamiento y ayudarte en tu proceso de compra online.<br><br>
+        ¿En qué puedo asistirte hoy?
+      </div>
+    </div>
+    <div class="input-area">
+      <input id="userInput" type="text" placeholder="Escribe tu mensaje aquí..." />
+      <button id="sendBtn">Enviar</button>
+    </div>
+  </div>
+
+  <script>
+    const messages = document.getElementById('messages');
+    const input = document.getElementById('userInput');
+    const sendBtn = document.getElementById('sendBtn');
+
+    async function sendMessage() {
+      const text = input.value.trim();
+      if (!text) return;
+      addMessage('user', text);
+      input.value = '';
+
+      const response = await fetch('/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text })
+      });
+
+      const data = await response.json();
+      addMessage('bot', data.reply || 'Lo siento, hubo un problema al responder.');
+    }
+
+    function addMessage(sender, text) {
+      const div = document.createElement('div');
+      div.className = `message ${sender}`;
+      div.innerHTML = text;
+      messages.appendChild(div);
+      messages.scrollTop = messages.scrollHeight;
+    }
+
+    sendBtn.addEventListener('click', sendMessage);
+    input.addEventListener('keypress', e => {
+      if (e.key === 'Enter') sendMessage();
+    });
+  </script>
+</body>
+</html>
