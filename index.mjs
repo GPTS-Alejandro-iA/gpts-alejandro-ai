@@ -1,57 +1,75 @@
 import express from "express";
-import bodyParser from "body-parser";
 import cors from "cors";
-import OpenAI from "openai";
+import bodyParser from "body-parser";
+import { OpenAI } from "openai";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const app = express();
-const port = process.env.PORT || 10000;
-
-// Configura CORS para permitir conexión desde tu dominio de Shopify
 app.use(cors());
 app.use(bodyParser.json());
 
-// Inicializa cliente OpenAI
-const openai = new OpenAI({
+// Inicializa OpenAI
+const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
-  organization: process.env.OPENAI_ORG_ID, // opcional
 });
 
-// Página principal
+const PORT = process.env.PORT || 10000;
+
+// 🧠 Ruta principal
 app.get("/", (req, res) => {
   res.send(`
-    <h1>🤖 Alejandro iA - Chatbot Web</h1>
-    <p>Endpoint operativo: <a href="/chat">/chat</a></p>
+    <h1>🤖 Alejandro iA - Chatbot operativo</h1>
+    <p>Visita <a href="/qr">/qr</a> para vincular WhatsApp Business</p>
+    <p><b>Comandos supervisor:</b> @ia on | @ia off | @ia estado</p>
   `);
 });
 
-// Endpoint del chat
-app.post("/chat", async (req, res) => {
+// 💬 Endpoint principal del chat
+app.post("/api/chat", async (req, res) => {
   try {
-    const { message, thread_id } = req.body;
+    const { message } = req.body;
 
-    if (!message) {
-      return res.status(400).json({ error: "Falta el campo 'message'" });
+    if (!message || message.trim() === "") {
+      return res.status(400).json({ error: "Mensaje vacío" });
     }
 
-    // Crea o continúa un hilo con el asistente
-    const response = await openai.chat.completions.create({
-      model: "gpt-4.1",
+    console.log("📩 Mensaje recibido:", message);
+
+    // Crea un hilo de conversación
+    const thread = await client.beta.threads.create({
       messages: [
-        { role: "system", content: "Eres Alejandro iA, un asesor experto en energía solar y atención al cliente de Green Power Tech Store." },
-        { role: "user", content: message }
-      ]
+        {
+          role: "user",
+          content: message,
+        },
+      ],
     });
 
-    const reply = response.choices[0].message.content;
-    res.json({ reply });
+    // Ejecuta el asistente personalizado (Alejandro iA)
+    const run = await client.beta.threads.runs.createAndPoll(thread.id, {
+      assistant_id: "asst_fUNT2sPlWS7LYmNqrU9uHKoU",
+    });
 
+    if (run.status === "completed") {
+      const messages = await client.beta.threads.messages.list(thread.id);
+      const respuesta = messages.data[0].content[0].text.value;
+      console.log("🤖 Respuesta (Alejandro iA):", respuesta);
+      res.json({ reply: respuesta });
+    } else {
+      res.json({
+        reply:
+          "Estoy procesando tu mensaje, por favor intenta de nuevo en unos segundos.",
+      });
+    }
   } catch (error) {
-    console.error("Error en /chat:", error);
+    console.error("❌ Error en /api/chat:", error);
     res.status(500).json({ error: "Error interno del servidor" });
   }
 });
 
-// Inicia servidor
-app.listen(port, () => {
-  console.log(`🚀 Servidor de Alejandro iA corriendo en puerto ${port}`);
+// 🔗 Puerto
+app.listen(PORT, () => {
+  console.log(`🚀 Servidor de Alejandro iA corriendo en puerto ${PORT}`);
 });
