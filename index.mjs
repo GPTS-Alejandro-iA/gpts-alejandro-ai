@@ -10,86 +10,91 @@ const app = express();
 app.use(bodyParser.json());
 app.use(express.static("public"));
 
-// Inicializa cliente de OpenAI
+// === 🔑 CONFIGURACIONES ===
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// URL del endpoint de HubSpot
-const HUBSPOT_API_URL = "https://api.hubapi.com/crm/v3/objects/contacts";
-const HUBSPOT_ACCESS_TOKEN = process.env.HUBSPOT_ACCESS_TOKEN;
+const HUBSPOT_TOKEN = process.env.HUBSPOT_ACCESS_TOKEN;
+const ASSISTANT_ID = "asst_fUNT2sPlWS7LYmNqrU9uHKoU"; // Tu asistente personalizado
 
-// ✅ Función para crear o actualizar un contacto en HubSpot
-async function sendLeadToHubSpot({ name, email, message }) {
-  try {
-    const res = await fetch(HUBSPOT_API_URL, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${HUBSPOT_ACCESS_TOKEN}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        properties: {
-          email: email || `prospecto_${Date.now()}@example.com`,
-          firstname: name || "Cliente",
-          message: message || "Sin mensaje",
-          lead_source: "Chat Web Alejandro iA",
-        },
-      }),
-    });
-
-    const data = await res.json();
-    if (res.ok) {
-      console.log("✅ Prospecto enviado a HubSpot:", data.id || data);
-    } else {
-      console.error("❌ Error al enviar a HubSpot:", data);
-    }
-  } catch (err) {
-    console.error("❌ Error en la conexión con HubSpot:", err.message);
-  }
-}
-
-// ✅ Ruta principal
+// === 🌞 RUTA PRINCIPAL DE PRUEBA ===
 app.get("/", (req, res) => {
-  res.sendFile("index.html", { root: "public" });
+  res.send("✅ Alejandro iA WebChat activo y conectado.");
 });
 
-// ✅ Ruta de chat
+// === 💬 CHAT ENDPOINT ===
 app.post("/chat", async (req, res) => {
-  const { message, name, email } = req.body;
-
   try {
-    // Envía el mensaje a tu Assistant específico
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "system",
-          content: `
-Eres Alejandro iA, asesor solar inteligente de Green Power Tech Store.
-Hablas con clientes que desean sistemas solares, backup de energía o financiamiento.
-Responde siempre de forma profesional, amable, resumida y útil.
-`,
-        },
-        { role: "user", content: message },
-      ],
-      temperature: 0.8,
+    const { message } = req.body;
+    if (!message) {
+      return res.status(400).json({ error: "Mensaje vacío." });
+    }
+
+    // === 🧠 Crear hilo y mensaje para el asistente ===
+    const thread = await openai.beta.threads.create();
+
+    await openai.beta.threads.messages.create(thread.id, {
+      role: "user",
+      content: message,
     });
 
-    const aiMessage = response.choices[0].message.content.trim();
+    const run = await openai.beta.threads.runs.create(thread.id, {
+      assistant_id: ASSISTANT_ID,
+    });
 
-    // Enviar los datos del cliente a HubSpot
-    await sendLeadToHubSpot({ name, email, message });
+    // Esperar a que termine la ejecución
+    let runStatus;
+    do {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      runStatus = await openai.beta.threads.runs.retrieve(thread.id, run.id);
+    } while (runStatus.status !== "completed");
 
-    res.json({ reply: aiMessage });
+    const messages = await openai.beta.threads.messages.list(thread.id);
+    const reply = messages.data[0]?.content?.[0]?.text?.value || "No hubo respuesta.";
+
+    // === 🧲 CAPTURA AUTOMÁTICA DE LEADS ===
+    const nameMatch = message.match(/(soy|me llamo|mi nombre es)\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+(\s+[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)?)/i);
+    const emailMatch = message.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-z]{2,}/i);
+    const phoneMatch = message.match(/\+?\d{7,15}/);
+
+    if (nameMatch || emailMatch || phoneMatch) {
+      const name = nameMatch ? nameMatch[2] : "Cliente sin nombre";
+      const email = emailMatch ? emailMatch[0] : undefined;
+      const phone = phoneMatch ? phoneMatch[0] : undefined;
+
+      console.log(`📬 Nuevo lead detectado: ${name}`);
+
+      await fetch("https://api.hubapi.com/crm/v3/objects/contacts", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${HUBSPOT_TOKEN}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          properties: {
+            firstname: name,
+            email: email || `${Date.now()}@temporal.com`,
+            phone: phone || "",
+            lifecyclestage: "lead",
+            source: "Chat Alejandro iA Web",
+          },
+        }),
+      });
+    }
+
+    res.json({ reply });
   } catch (error) {
     console.error("❌ Error en /chat:", error);
-    res.status(500).json({ error: "Ocurrió un error al procesar tu mensaje." });
+    res.status(500).json({
+      error: "Error interno en el servidor",
+      details: error.message,
+    });
   }
 });
 
-// Inicia el servidor
+// === 🚀 INICIAR SERVIDOR ===
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, () =>
-  console.log(`🌞 WebChat de Alejandro iA activo en puerto ${PORT}`)
-);
+app.listen(PORT, () => {
+  console.log(`🌞 Alejandro iA WebChat activo en puerto ${PORT}`);
+});
