@@ -1,136 +1,155 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Alejandro iA - Chat Asesor Solar</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Alejandro iA WebChat</title>
   <style>
     body {
-      margin: 0;
-      padding: 0;
-      font-family: 'Segoe UI', sans-serif;
-      background: linear-gradient(180deg, #0b1f14, #1a3c29);
-      background-image: url('https://images.unsplash.com/photo-1600585154526-990dced4db0d?auto=format&fit=crop&w=1920&q=80');
-      background-size: cover;
-      background-position: center;
-      color: white;
+      font-family: "Inter", sans-serif;
+      background-color: #f4f6f8;
       display: flex;
-      justify-content: center;
+      flex-direction: column;
       align-items: center;
+      justify-content: center;
       height: 100vh;
-      backdrop-filter: blur(4px);
+      margin: 0;
     }
-    .chat-container {
-      width: 380px;
-      height: 540px;
-      background-color: rgba(0, 0, 0, 0.6);
-      border-radius: 20px;
+
+    #chat-container {
+      width: 100%;
+      max-width: 450px;
+      height: 80vh;
+      background-color: #ffffff;
+      border-radius: 16px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
       display: flex;
       flex-direction: column;
       overflow: hidden;
-      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.4);
     }
-    .header {
-      background-color: rgba(25, 150, 80, 0.9);
-      padding: 16px;
-      text-align: center;
-      font-size: 1.2em;
-      font-weight: bold;
-    }
-    .messages {
+
+    #chat {
       flex: 1;
       padding: 16px;
       overflow-y: auto;
+      scroll-behavior: smooth;
     }
+
     .message {
-      margin-bottom: 12px;
-      line-height: 1.4em;
+      margin: 8px 0;
+      line-height: 1.5;
     }
-    .bot {
-      text-align: left;
-    }
+
     .user {
       text-align: right;
+      color: #1a73e8;
+      font-weight: 500;
     }
-    .input-area {
+
+    .bot {
+      text-align: left;
+      color: #333;
+    }
+
+    #input-area {
       display: flex;
-      border-top: 1px solid rgba(255,255,255,0.2);
-    }
-    input {
-      flex: 1;
+      border-top: 1px solid #ddd;
       padding: 12px;
-      border: none;
+      background-color: #fafafa;
+    }
+
+    #userInput {
+      flex: 1;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 12px;
+      font-size: 15px;
       outline: none;
-      font-size: 1em;
-      background-color: transparent;
-      color: white;
     }
-    input::placeholder {
-      color: #fff;
-      opacity: 0.7;
-    }
+
     button {
-      background-color: #1fb26b;
-      border: none;
+      background-color: #1a73e8;
       color: white;
-      padding: 0 20px;
-      font-size: 1em;
+      border: none;
+      padding: 10px 16px;
+      margin-left: 8px;
+      border-radius: 12px;
       cursor: pointer;
-      transition: background-color 0.3s;
+      font-size: 15px;
+      transition: background 0.2s;
     }
+
     button:hover {
-      background-color: #1d965c;
+      background-color: #155fc0;
+    }
+
+    #status {
+      font-size: 13px;
+      color: #666;
+      text-align: center;
+      padding: 4px;
     }
   </style>
 </head>
 <body>
-  <div class="chat-container">
-    <div class="header">🤖 Alejandro iA</div>
-    <div class="messages" id="messages">
-      <div class="message bot">¡Hola! 👋 Soy <b>Alejandro iA</b>, tu asesor virtual de <b>Green Power Tech Store</b>.<br><br>
-        Puedo orientarte sobre sistemas solares, soluciones de respaldo de energía, opciones de financiamiento y ayudarte en tu proceso de compra online.<br><br>
-        ¿En qué puedo asistirte hoy?
-      </div>
+  <div id="chat-container">
+    <div id="chat">
+      <div class="message bot"><b>Alejandro iA:</b> ¡Hola! 👋 Soy Alejandro iA, tu asistente de energía solar Comfort. ¿En qué puedo ayudarte hoy?</div>
     </div>
-    <div class="input-area">
-      <input id="userInput" type="text" placeholder="Escribe tu mensaje aquí..." />
-      <button id="sendBtn">Enviar</button>
+    <div id="input-area">
+      <input type="text" id="userInput" placeholder="Escribe tu mensaje..." onkeydown="if(event.key==='Enter') sendMessage()" />
+      <button onclick="sendMessage()">Enviar</button>
     </div>
+    <div id="status"></div>
   </div>
 
   <script>
-    const messages = document.getElementById('messages');
-    const input = document.getElementById('userInput');
-    const sendBtn = document.getElementById('sendBtn');
+    const chatBox = document.getElementById("chat");
+    const status = document.getElementById("status");
+    let userId = localStorage.getItem("userId");
+
+    if (!userId) {
+      userId = crypto.randomUUID();
+      localStorage.setItem("userId", userId);
+    }
 
     async function sendMessage() {
-      const text = input.value.trim();
-      if (!text) return;
-      addMessage('user', text);
-      input.value = '';
+      const input = document.getElementById("userInput");
+      const message = input.value.trim();
+      if (!message) return;
 
-      const response = await fetch('/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text })
-      });
+      // Mostrar mensaje del usuario
+      appendMessage("user", message);
+      input.value = "";
 
-      const data = await response.json();
-      addMessage('bot', data.reply || 'Lo siento, hubo un problema al responder.');
+      try {
+        status.textContent = "Alejandro iA está escribiendo...";
+
+        const res = await fetch("/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message, userId }),
+        });
+
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+
+        appendMessage("bot", data.reply);
+      } catch (error) {
+        appendMessage("bot", "⚠️ Lo siento, hubo un error al responder. Intenta nuevamente.");
+        console.error(error);
+      } finally {
+        status.textContent = "";
+      }
     }
 
-    function addMessage(sender, text) {
-      const div = document.createElement('div');
-      div.className = `message ${sender}`;
-      div.innerHTML = text;
-      messages.appendChild(div);
-      messages.scrollTop = messages.scrollHeight;
+    function appendMessage(sender, text) {
+      const msg = document.createElement("div");
+      msg.classList.add("message", sender);
+      msg.innerHTML = `<b>${sender === "user" ? "Tú" : "Alejandro iA"}:</b> ${text}`;
+      chatBox.appendChild(msg);
+      chatBox.scrollTop = chatBox.scrollHeight;
     }
-
-    sendBtn.addEventListener('click', sendMessage);
-    input.addEventListener('keypress', e => {
-      if (e.key === 'Enter') sendMessage();
-    });
   </script>
 </body>
 </html>
