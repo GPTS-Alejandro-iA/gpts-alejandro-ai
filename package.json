@@ -1,14 +1,19 @@
 {
   "name": "alejandro-ia-webchat",
   "version": "1.0.0",
-  "type": "module",
+  "description": "Chatbot Alejandro iA conectado con OpenAI, HubSpot y Gmail (Nodemailer)",
   "main": "index.mjs",
+  "type": "module",
   "scripts": {
     "start": "node index.mjs"
   },
   "dependencies": {
     "express": "^4.19.2",
+    "body-parser": "^1.20.2",
+    "dotenv": "^16.4.5",
+    "node-fetch": "^3.3.2",
     "openai": "^4.56.0",
-    "dotenv": "^16.4.5"
+    "cors": "^2.8.5",
+    "nodemailer": "^6.9.11"
   }
 }
