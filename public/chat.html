@@ -6,62 +6,93 @@
   <title>Alejandro iA - Green Power Tech</title>
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
   <style>
-    body { margin:0; font-family:'Roboto', sans-serif; background:#ece5dd; }
-    .chat-container { display:flex; flex-direction:column; height:100vh; max-width:600px; margin:0 auto; background:#fff; box-shadow:0 0 10px rgba(0,0,0,0.2); }
-    .chat-header { background:#075e54; color:white; padding:15px; font-weight:500; font-size:18px; }
-    .chat-messages { flex:1; padding:15px; overflow-y:auto; display:flex; flex-direction:column; }
-    .message { max-width:70%; margin-bottom:10px; padding:10px 15px; border-radius:20px; line-height:1.4; word-wrap:break-word; }
-    .user-message { align-self:flex-end; background:#dcf8c6; }
-    .bot-message { align-self:flex-start; background:#fff; border:1px solid #ddd; }
-    .chat-input { display:flex; padding:10px; border-top:1px solid #ddd; background:#f0f0f0; }
-    .chat-input input { flex:1; padding:10px 15px; border-radius:20px; border:1px solid #ccc; outline:none; font-size:16px; }
-    .chat-input button { margin-left:10px; padding:10px 20px; background:#075e54; color:white; border:none; border-radius:20px; cursor:pointer; font-size:16px; }
-    .chat-input button:hover { background:#054c42; }
-
-    /* Formulario inicial */
-    .user-form { position:absolute; top:0; left:0; width:100%; height:100%; background:#ece5dd; display:flex; justify-content:center; align-items:center; }
-    .form-box { background:#fff; padding:20px; border-radius:10px; box-shadow:0 0 10px rgba(0,0,0,0.2); width:90%; max-width:400px; }
-    .form-box h2 { margin-top:0; text-align:center; color:#075e54; }
-    .form-box input { width:100%; margin-bottom:10px; padding:10px; border-radius:5px; border:1px solid #ccc; font-size:16px; }
-    .form-box button { width:100%; padding:10px; border:none; border-radius:5px; background:#075e54; color:white; font-size:16px; cursor:pointer; }
-    .form-box button:hover { background:#054c42; }
-    .error { color:red; font-size:14px; margin-bottom:10px; text-align:center; }
+    body { margin: 0; font-family: 'Roboto', sans-serif; background: #ece5dd; }
+    .chat-container { display: flex; flex-direction: column; height: 100vh; max-width: 600px; margin: 0 auto; background: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.2); }
+    .chat-header { background: #075e54; color: white; padding: 15px; font-weight: 500; font-size: 18px; }
+    .chat-messages { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; }
+    .message { max-width: 70%; margin-bottom: 10px; padding: 10px 15px; border-radius: 20px; line-height: 1.4; word-wrap: break-word; }
+    .user-message { align-self: flex-end; background: #dcf8c6; }
+    .bot-message { align-self: flex-start; background: #fff; border: 1px solid #ddd; }
+    .chat-input { display: flex; flex-direction: column; padding: 10px; border-top: 1px solid #ddd; background: #f0f0f0; }
+    .chat-input input { flex: 1; padding: 10px 15px; border-radius: 20px; border: 1px solid #ccc; outline: none; font-size: 16px; margin-bottom: 5px; }
+    .chat-input button { padding: 10px 20px; background: #075e54; color: white; border: none; border-radius: 20px; cursor: pointer; font-size: 16px; }
+    .chat-input button:hover { background: #054c42; }
   </style>
 </head>
 <body>
-
-  <!-- Formulario inicial -->
-  <div class="user-form" id="userForm">
-    <div class="form-box">
-      <h2>Bienvenido a Green Power Tech</h2>
-      <div class="error" id="formError"></div>
-      <input type="text" id="fullName" placeholder="Nombre y Apellido">
-      <input type="text" id="phone" placeholder="Teléfono">
-      <input type="email" id="email" placeholder="Email (opcional)">
-      <input type="text" id="address" placeholder="Dirección (opcional)">
-      <button onclick="startChat()">Iniciar Chat</button>
-    </div>
-  </div>
-
-  <!-- Chat -->
-  <div class="chat-container" id="chatContainer" style="display:none;">
+  <div class="chat-container">
     <div class="chat-header">Alejandro iA - Asesor Solar</div>
     <div class="chat-messages" id="chatMessages">
-      <div class="bot-message">👋 ¡Hola! Soy Alejandro iA, tu asesor solar de Green Power Tech Store. Para ofrecerte orientación y preparar tu cotización, necesito tus datos.</div>
+      <div class="bot-message">👋 ¡Hola! Soy Alejandro iA, tu asesor solar de Green Power Tech Store. Para ofrecerte orientación y preparar tu cotización, necesito tu nombre y apellido, teléfono, email, dirección y mejor hora para llamarte.</div>
     </div>
     <div class="chat-input">
-      <input type="text" id="messageInput" placeholder="Escribe tu mensaje...">
+      <input type="text" id="nameInput" placeholder="Nombre y Apellido *">
+      <input type="email" id="emailInput" placeholder="Email">
+      <input type="text" id="phoneInput" placeholder="Teléfono *">
+      <input type="text" id="addressInput" placeholder="Dirección">
+      <input type="text" id="bestTimeInput" placeholder="Mejor hora para llamar">
       <button onclick="sendMessage()">Enviar</button>
     </div>
   </div>
 
   <script>
-    let userData = {};
-
     const chatMessages = document.getElementById('chatMessages');
-    const messageInput = document.getElementById('messageInput');
-    const userForm = document.getElementById('userForm');
-    const chatContainer = document.getElementById('chatContainer');
-    const formError = document.getElementById('formError');
+    const nameInput = document.getElementById('nameInput');
+    const emailInput = document.getElementById('emailInput');
+    const phoneInput = document.getElementById('phoneInput');
+    const addressInput = document.getElementById('addressInput');
+    const bestTimeInput = document.getElementById('bestTimeInput');
 
-    function appendMessage(text, classNa
+    function appendMessage(text, className) {
+      const div = document.createElement('div');
+      div.className = `message ${className}`;
+      div.textContent = text;
+      chatMessages.appendChild(div);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    async function sendMessage() {
+      const name = nameInput.value.trim();
+      const email = emailInput.value.trim();
+      const phone = phoneInput.value.trim();
+      const address = addressInput.value.trim();
+      const bestTime = bestTimeInput.value.trim();
+
+      if (!name || !phone) {
+        appendMessage('Por favor completa Nombre y Apellido y Teléfono.', 'bot-message');
+        return;
+      }
+
+      appendMessage(`${name}: ${phoneInput.value}`, 'user-message');
+
+      try {
+        const response = await fetch('/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: 'Nuevo lead',
+            name,
+            email,
+            phone,
+            address,
+            bestTime
+          })
+        });
+
+        const data = await response.json();
+        appendMessage(data.reply || 'Lo siento, no pude generar respuesta.', 'bot-message');
+      } catch (err) {
+        console.error(err);
+        appendMessage('Error al enviar el mensaje. Intenta de nuevo.', 'bot-message');
+      }
+    }
+
+    // Enter para enviar
+    document.querySelectorAll('.chat-input input').forEach(input => {
+      input.addEventListener('keypress', e => {
+        if (e.key === 'Enter') sendMessage();
+      });
+    });
+  </script>
+</body>
+</html>
