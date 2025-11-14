@@ -109,33 +109,3 @@ app.get('/chat', (req, res) => {
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en el puerto ${PORT}`);
 });
-
-  try {
-    const response = await fetch(
-      `https://api.openai.com/v1/assistants/${process.env.ASSISTANT_ID}/message`,
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          input: [{ role: 'user', content: message }]
-        })
-      }
-    );
-
-    const data = await response.json();
-    aiReply = data.output?.[0]?.content?.[0]?.text || 'Lo siento, no pude generar respuesta.';
-  } catch (err) {
-    console.error('Error generando respuesta de AI:', err);
-    aiReply = 'Lo siento, hubo un error generando la respuesta.';
-  }
-
-  // 3️⃣ Enviar cotización / email al cliente
-  try {
-    await transporter.sendMail({
-      from: process.env.GMAIL_USER,
-      to: email,
-      subject: 'Cotización de Green Power Tech',
-      text:
