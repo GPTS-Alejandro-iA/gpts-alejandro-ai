@@ -2,11 +2,17 @@ import express from "express";
 import dotenv from "dotenv";
 import OpenAI from "openai";
 import nodemailer from "nodemailer";
+import cors from "cors";
+import path from "path";
+import { fileURLToPath } from "url";
 
 dotenv.config();
 
 const app = express();
 app.use(express.json());
+app.use(cors());
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // -----------------------------
 // CONFIG: OPENAI
@@ -21,8 +27,8 @@ const client = new OpenAI({
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
-    user: process.env.GMAIL_USER, // tu Gmail
-    pass: process.env.GMAIL_PASS, // tu App Password
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_PASS,
   },
 });
 
@@ -31,7 +37,6 @@ const transporter = nodemailer.createTransport({
 // -----------------------------
 const HUBSPOT_URL = "https://api.hubapi.com/crm/v3/objects/contacts";
 
-// Crear Lead en HubSpot
 async function sendToHubSpot(name, email, phone, message) {
   try {
     const response = await fetch(HUBSPOT_URL, {
@@ -92,43 +97,29 @@ app.post("/chat", async (req, res) => {
   const { threadId, message } = req.body;
 
   try {
-    let thread = null;
+    let thread = threadId
+      ? { id: threadId }
+      : await client.beta.threads.create();
 
-    // 1. Crear thread si no existe
-    if (!threadId) {
-      thread = await client.beta.threads.create();
-    } else {
-      thread = { id: threadId };
-    }
-
-    // 2. Enviar mensaje
     await client.beta.threads.messages.create(thread.id, {
       role: "user",
       content: message,
     });
 
-    // 3. Correr el Assistant
     const run = await client.beta.threads.runs.createAndPoll(thread.id, {
       assistant_id: process.env.ASSISTANT_ID,
     });
 
-    // 4. Obtener respuesta
     const messages = await client.beta.threads.messages.list(thread.id);
     const lastMessage = messages.data[0].content[0].text.value;
 
     console.log("Assistant:", lastMessage);
-
-    // -----------------------------
-    // 5. Ver si el assistant pidió enviar Lead o Email
-    // (Usa "actions" en OpenAI / function calling)
-    // -----------------------------
 
     if (run.required_action) {
       const action = run.required_action.submit_tool_outputs.tool_calls[0];
 
       if (action.function.name === "send_lead") {
         const payload = JSON.parse(action.function.arguments);
-
         await sendToHubSpot(
           payload.name,
           payload.email,
@@ -148,7 +139,6 @@ app.post("/chat", async (req, res) => {
 
       if (action.function.name === "send_email") {
         const payload = JSON.parse(action.function.arguments);
-
         await sendEmailToClient({
           to: payload.to,
           subject: payload.subject,
@@ -166,16 +156,12 @@ app.post("/chat", async (req, res) => {
       }
     }
 
-    // -----------------------------
-    // 6. Respuesta al WebChat
-    // -----------------------------
     res.json({
       reply: lastMessage,
       threadId: thread.id,
     });
   } catch (error) {
     console.error("Error /chat:", error);
-
     res.json({
       reply: "Lo siento, tuve un problema al procesar tu mensaje.",
       threadId: null,
@@ -184,8 +170,17 @@ app.post("/chat", async (req, res) => {
 });
 
 // -----------------------------
+// RUTA DE PRUEBA
+// -----------------------------
 app.get("/", (req, res) => {
   res.send("Alejandro iA está activo.");
+});
+
+// -----------------------------
+// RUTA PARA INTERFAZ WEB
+// -----------------------------
+app.get("/chat-ui", (req, res) => {
+  res.sendFile(path.join(__dirname, "chat.html"));
 });
 
 // -----------------------------
