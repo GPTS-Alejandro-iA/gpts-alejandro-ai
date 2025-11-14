@@ -29,7 +29,7 @@ async function callOpenAI(messages) {
       },
       body: JSON.stringify({
         messages,
-        model: "gpt-4.1-mini", // O el modelo que uses
+        model: "gpt-4.1-mini",
         tool_choice: "auto"
       })
     });
@@ -82,8 +82,8 @@ async function sendToHubSpot({ name, email, phone, message }) {
 const transporter = nodemailer.createTransport({
   service: "Gmail",
   auth: {
-    user: process.env.SMTP_USER, // gpts.citas@gmail.com
-    pass: process.env.SMTP_PASS  // contraseña de aplicación
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS
   }
 });
 
@@ -114,7 +114,6 @@ app.post("/chat", async (req, res) => {
 
   console.log("\n🟨 MENSAJE RECIBIDO DEL CLIENTE:", userMessage);
 
-  /* 1) Mandamos mensaje a OpenAI */
   const aiResponse = await callOpenAI([
     { role: "user", content: userMessage }
   ]);
@@ -125,7 +124,6 @@ app.post("/chat", async (req, res) => {
     });
   }
 
-  /* 2) Ver si OpenAI pide una llamada de herramienta */
   const toolCall = aiResponse?.messages?.[0]?.tool_calls?.[0];
   let aiText = aiResponse?.messages?.[0]?.content || "";
 
@@ -194,6 +192,13 @@ app.get("/chat-ui", (req, res) => {
   </body>
   </html>
   `);
+});
+
+/* ---------------------------------------------------------
+   6.5) RUTA RAÍZ /
+--------------------------------------------------------- */
+app.get("/", (req, res) => {
+  res.redirect("/chat-ui");
 });
 
 /* ---------------------------------------------------------
