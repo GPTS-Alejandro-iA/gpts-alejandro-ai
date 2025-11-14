@@ -14,7 +14,7 @@
     .user-message { align-self: flex-end; background: #dcf8c6; }
     .bot-message { align-self: flex-start; background: #fff; border: 1px solid #ddd; }
     .chat-input { display: flex; flex-direction: column; padding: 10px; border-top: 1px solid #ddd; background: #f0f0f0; }
-    .chat-input input { flex: 1; padding: 10px 15px; border-radius: 20px; border: 1px solid #ccc; outline: none; font-size: 16px; margin-bottom: 5px; }
+    .chat-input input { margin-bottom: 5px; padding: 10px 15px; border-radius: 20px; border: 1px solid #ccc; outline: none; font-size: 16px; }
     .chat-input button { padding: 10px 20px; background: #075e54; color: white; border: none; border-radius: 20px; cursor: pointer; font-size: 16px; }
     .chat-input button:hover { background: #054c42; }
   </style>
@@ -23,14 +23,17 @@
   <div class="chat-container">
     <div class="chat-header">Alejandro iA - Asesor Solar</div>
     <div class="chat-messages" id="chatMessages">
-      <div class="bot-message">👋 ¡Hola! Soy Alejandro iA, tu asesor solar de Green Power Tech Store. Para ofrecerte orientación y preparar tu cotización, necesito tu nombre y apellido, teléfono, email, dirección y mejor hora para llamarte.</div>
+      <div class="bot-message">
+        👋 ¡Hola! Soy Alejandro iA, tu asesor solar de Green Power Tech Store. Para ofrecerte orientación y preparar tu cotización, necesito tus datos obligatorios: Nombre completo y Teléfono, opcional: Email, Dirección y Mejor hora para llamarte.
+      </div>
     </div>
     <div class="chat-input">
-      <input type="text" id="nameInput" placeholder="Nombre y Apellido *">
-      <input type="email" id="emailInput" placeholder="Email">
+      <input type="text" id="nameInput" placeholder="Nombre completo *">
       <input type="text" id="phoneInput" placeholder="Teléfono *">
+      <input type="email" id="emailInput" placeholder="Email">
       <input type="text" id="addressInput" placeholder="Dirección">
       <input type="text" id="bestTimeInput" placeholder="Mejor hora para llamar">
+      <input type="text" id="messageInput" placeholder="Escribe tu mensaje...">
       <button onclick="sendMessage()">Enviar</button>
     </div>
   </div>
@@ -38,10 +41,11 @@
   <script>
     const chatMessages = document.getElementById('chatMessages');
     const nameInput = document.getElementById('nameInput');
-    const emailInput = document.getElementById('emailInput');
     const phoneInput = document.getElementById('phoneInput');
+    const emailInput = document.getElementById('emailInput');
     const addressInput = document.getElementById('addressInput');
     const bestTimeInput = document.getElementById('bestTimeInput');
+    const messageInput = document.getElementById('messageInput');
 
     function appendMessage(text, className) {
       const div = document.createElement('div');
@@ -53,30 +57,25 @@
 
     async function sendMessage() {
       const name = nameInput.value.trim();
-      const email = emailInput.value.trim();
       const phone = phoneInput.value.trim();
+      const email = emailInput.value.trim();
       const address = addressInput.value.trim();
       const bestTime = bestTimeInput.value.trim();
+      const message = messageInput.value.trim();
 
       if (!name || !phone) {
-        appendMessage('Por favor completa Nombre y Apellido y Teléfono.', 'bot-message');
+        alert("Por favor ingresa Nombre completo y Teléfono obligatorios.");
         return;
       }
 
-      appendMessage(`${name}: ${phoneInput.value}`, 'user-message');
+      appendMessage(message || '(sin mensaje)', 'user-message');
+      messageInput.value = '';
 
       try {
         const response = await fetch('/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            message: 'Nuevo lead',
-            name,
-            email,
-            phone,
-            address,
-            bestTime
-          })
+          body: JSON.stringify({ name, phone, email, address, bestTime, message })
         });
 
         const data = await response.json();
@@ -87,11 +86,9 @@
       }
     }
 
-    // Enter para enviar
-    document.querySelectorAll('.chat-input input').forEach(input => {
-      input.addEventListener('keypress', e => {
-        if (e.key === 'Enter') sendMessage();
-      });
+    // Enter para enviar mensaje
+    messageInput.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') sendMessage();
     });
   </script>
 </body>
