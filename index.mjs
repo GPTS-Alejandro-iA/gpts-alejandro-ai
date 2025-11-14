@@ -25,19 +25,20 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-// Ruta principal para recibir mensajes del chat
+// Ruta principal para enviar mensajes al chat
 app.post('/chat', async (req, res) => {
-  const { message, name, phone, email, address } = req.body;
+  const { message, name, email, phone, address, bestTime } = req.body;
 
-  // Validación de datos obligatorios
-  if (!name || name.trim().split(' ').length < 2) {
-    return res.status(400).json({ success: false, reply: 'Debes ingresar nombre y apellido.' });
-  }
-  if (!phone || phone.trim() === '') {
-    return res.status(400).json({ success: false, reply: 'Debes ingresar tu teléfono.' });
+  if (!message || !name || !phone) {
+    return res.status(400).json({ success: false, reply: 'Faltan datos obligatorios: nombre completo y teléfono.' });
   }
 
-  // Enviar lead a HubSpot
+  // Separar nombre y apellido
+  const nameParts = name.trim().split(' ');
+  const firstName = nameParts[0];
+  const lastName = nameParts.slice(1).join(' ') || '-';
+
+  // 1️⃣ Enviar lead a HubSpot
   try {
     await fetch('https://api.hubapi.com/crm/v3/objects/contacts', {
       method: 'POST',
@@ -48,10 +49,11 @@ app.post('/chat', async (req, res) => {
       body: JSON.stringify({
         properties: {
           email: email || '',
-          firstname: name.split(' ')[0],
-          lastname: name.split(' ').slice(1).join(' '),
-          phone: phone,
-          address: address || ''
+          firstname: firstName,
+          lastname: lastName,
+          phone,
+          address: address || '',
+          best_time_to_call: bestTime || ''
         }
       })
     });
@@ -60,8 +62,31 @@ app.post('/chat', async (req, res) => {
     return res.json({ success: false, reply: 'No se pudo enviar el lead a HubSpot.' });
   }
 
-  // Generar respuesta de Alejandro iA vía OpenAI
+  // 2️⃣ Generar respuesta de Alejandro iA vía OpenAI
   let aiReply = '';
   try {
     const response = await fetch(
-      `https://api.openai.com/v1/assistants/${process.env.ASSI
+      `https://api.openai.com/v1/assistants/${process.env.ASSISTANT_ID}/message`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          input: [{ role: 'user', content: message }]
+        })
+      }
+    );
+
+    const data = await response.json();
+    aiReply = data.output?.[0]?.content?.[0]?.text || 'Lo siento, no pude generar respuesta.';
+  } catch (err) {
+    console.error('Error generando respuesta de AI:', err);
+    aiReply = 'Lo siento, hubo un error generando la respuesta.';
+  }
+
+  // 3️⃣ Enviar cotización / email al cliente
+  try {
+    await transporter.sendMail({
+      from: proces
