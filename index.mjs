@@ -33,7 +33,6 @@ app.post('/chat', async (req, res) => {
     return res.status(400).json({ success: false, reply: 'Faltan datos obligatorios: nombre completo y teléfono.' });
   }
 
-  // Separar nombre y apellido
   const nameParts = name.trim().split(' ');
   const firstName = nameParts[0];
   const lastName = nameParts.slice(1).join(' ') || '-';
@@ -89,4 +88,28 @@ app.post('/chat', async (req, res) => {
   // 3️⃣ Enviar cotización / email al cliente
   try {
     await transporter.sendMail({
-      from: proces
+      from: process.env.GMAIL_USER,
+      to: email || '',
+      subject: 'Cotización de Green Power Tech',
+      text: `Hola ${name}, gracias por tu interés en nuestros sistemas solares.\n\nTe responderemos a la brevedad.\n\nMensaje original: ${message}`
+    });
+  } catch (err) {
+    console.error('Error enviando email:', err);
+  }
+
+  return res.json({ success: true, reply: aiReply });
+});
+
+// Servir index.html en la raíz
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Servir chat.html si quieres interfaz separada
+app.get('/chat', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'chat.html'));
+});
+
+app.listen(PORT, () => {
+  console.log(`Servidor corriendo en el puerto ${PORT}`);
+});
