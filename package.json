@@ -1,15 +1,31 @@
 {
   "name": "alejandro-ia-webchat",
   "version": "1.0.0",
-  "type": "module",
+  "description": "Chatbot web para Alejandro iA en Green Power Tech Store",
   "main": "index.mjs",
+  "type": "module",
   "scripts": {
-    "start": "node index.mjs"
+    "start": "node index.mjs",
+    "dev": "nodemon index.mjs"
   },
+  "keywords": [
+    "chatbot",
+    "webchat",
+    "hubspot",
+    "alejandro-ia"
+  ],
+  "author": "Tu Nombre",
+  "license": "MIT",
   "dependencies": {
-    "express": "^4.19.2",
-    "openai": "^4.56.0",
-    "dotenv": "^16.4.5",
-    "nodemailer": "^6.9.8"
+    "body-parser": "^1.20.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "nodemailer": "^6.9.4",
+    "node-fetch": "^3.4.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
   }
 }
+
