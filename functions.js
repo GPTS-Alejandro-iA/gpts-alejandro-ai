@@ -1,57 +1,81 @@
-import fetch from "node-fetch"; // Si Node v22, fetch ya está global
+// functions.js
+import fetch from "node-fetch";
 import nodemailer from "nodemailer";
 
-// --- HubSpot Lead ---
-export async function send_lead({ name, phone, bestTime, address }) {
-  const HUBSPOT_TOKEN = process.env.HUBSPOT_TOKEN;
+// Configuración de HubSpot desde variables de entorno
+const HUBSPOT_TOKEN = process.env.HUBSPOT_TOKEN;
 
-  const url = "https://api.hubapi.com/crm/v3/objects/contacts";
+// Configuración de Nodemailer desde variables de entorno
+const EMAIL_USER = process.env.EMAIL_USER;
+const EMAIL_PASS = process.env.EMAIL_PASS;
+const EMAIL_TO = process.env.EMAIL_TO; // Dirección que recibirá los leads
 
-  const data = {
-    properties: {
-      firstname: name,
-      phone: phone,
-      address: address || "",
-      best_time_to_call: bestTime || "",
-    },
-  };
+// Función para enviar lead a HubSpot
+export async function send_lead({ name, email, phone, message }) {
+  try {
+    const url = "https://api.hubapi.com/crm/v3/objects/contacts";
 
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${HUBSPOT_TOKEN}`,
-    },
-    body: JSON.stringify(data),
-  });
+    const body = {
+      properties: {
+        firstname: name,
+        email: email,
+        phone: phone || "",
+        message: message || "",
+      },
+    };
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error("Error enviando lead a HubSpot:", errorText);
-    throw new Error(`HubSpot API error: ${errorText}`);
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${HUBSPOT_TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(`HubSpot API error: ${JSON.stringify(data)}`);
+    }
+
+    console.log("Lead enviado a HubSpot:", data);
+    return data;
+  } catch (error) {
+    console.error("Error enviando lead a HubSpot:", error);
+    throw error;
   }
-
-  return await response.json();
 }
 
-// --- Envío de Email ---
-export async function send_email({ name, phone, bestTime, address }) {
-  const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: process.env.SMTP_PORT,
-    secure: process.env.SMTP_SECURE === "true",
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
-  });
+// Función para enviar correo
+export async function send_email({ name, email, phone, message }) {
+  try {
+    const transporter = nodemailer.createTransport({
+      service: "gmail", // o el que uses
+      auth: {
+        user: EMAIL_USER,
+        pass: EMAIL_PASS,
+      },
+    });
 
-  const mailOptions = {
-    from: `"Alejandro iA" <${process.env.SMTP_USER}>`,
-    to: process.env.LEADS_EMAIL,
-    subject: "Nuevo Lead de Alejandro iA",
-    text: `Nombre: ${name}\nTeléfono: ${phone}\nHora: ${bestTime}\nDirección: ${address || ""}`,
-  };
+    const mailOptions = {
+      from: EMAIL_USER,
+      to: EMAIL_TO,
+      subject: `Nuevo Lead de ${name}`,
+      html: `
+        <h2>Nuevo Lead recibido</h2>
+        <p><strong>Nombre:</strong> ${name}</p>
+        <p><strong>Email:</strong> ${email}</p>
+        <p><strong>Teléfono:</strong> ${phone || "No proporcionado"}</p>
+        <p><strong>Mensaje:</strong> ${message || "No proporcionado"}</p>
+      `,
+    };
 
-  await transporter.sendMail(mailOptions);
+    const info = await transporter.sendMail(mailOptions);
+    console.log("Correo enviado:", info.messageId);
+    return info;
+  } catch (error) {
+    console.error("Error enviando correo:", error);
+    throw error;
+  }
 }
