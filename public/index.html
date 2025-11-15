@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Alejandro iA - Green Power Tech</title>
+  <title>¡Hola! Soy Alejandro iA tu Asesor Digital Inteligente</title>
+
   <style>
     body {
       margin: 0;
@@ -31,15 +32,17 @@
       background: #075e54;
       color: white;
       padding: 15px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 18px;
+      text-align: center;
       font-weight: bold;
     }
 
-    .chat-header img {
-      height: 40px;
+    .chat-header .greeting {
+      font-size: 16px;
+      margin-bottom: 5px;
+    }
+
+    .chat-header .company-name {
+      font-size: 18px;
     }
 
     .chat-messages {
@@ -106,16 +109,15 @@
 <body>
   <div class="chat-container">
     <div class="chat-header">
-      Alejandro iA
-      <img src="https://greenpowertech.store/cdn/shop/files/gpt_logo_transp.png" alt="Logo" />
+      <div class="greeting">¡Hola! Soy Alejandro iA y seré tu Asesor Digital Inteligente de</div>
+      <div class="company-name">Green Power Tech Store</div>
     </div>
 
     <div class="chat-messages" id="chatMessages">
       <div class="message bot-message">
-        👋 ¡Hola! Soy Alejandro iA, tu asesor solar de Green Power Tech.  
-        Para empezar, ¿cuál de nuestros sistemas le interesa conocer más?
-        <br>• 1.🔆 Energía Solar Fuera de la red
-        <br>• 2.⚡ Backups de Alta Capacidad
+        👋 ¡Hola! Soy Alejandro iA, tu asesor solar de Green Power Tech. Para empezar, ¿cuál de nuestros sistemas le interesa conocer más?<br>
+        • 1.🔆 Energía Solar Fuera de la red<br>
+        • 2.⚡ Backups de Alta Capacidad
       </div>
     </div>
 
@@ -129,10 +131,13 @@
     const chatMessages = document.getElementById("chatMessages");
     const messageInput = document.getElementById("messageInput");
 
+    const sessionId = localStorage.getItem("sessionId") || crypto.randomUUID();
+    localStorage.setItem("sessionId", sessionId);
+
     function appendMessage(text, className) {
       const div = document.createElement("div");
       div.className = `message ${className}`;
-      div.textContent = text;
+      div.innerHTML = text;
       chatMessages.appendChild(div);
       chatMessages.scrollTop = chatMessages.scrollHeight;
     }
@@ -148,18 +153,24 @@
         const response = await fetch("/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message, name: "", phone: "", email: "", address: "", bestTime: "" })
+          body: JSON.stringify({
+            sessionId,
+            message
+          })
         });
 
         const data = await response.json();
         appendMessage(data.reply || "No pude generar respuesta.", "bot-message");
+
       } catch (err) {
         appendMessage("❌ Error enviando el mensaje.", "bot-message");
       }
     }
 
-    messageInput.addEventListener("keypress", e => {
-      if (e.key === "Enter") sendMessage();
+    messageInput.addEventListener("keypress", (e) => {
+      if (e.key === "Enter") {
+        sendMessage();
+      }
     });
   </script>
 </body>
