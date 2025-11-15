@@ -2,62 +2,44 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import { send_lead, send_email } from "./functions.js";
-import OpenAI from "openai";
 
 dotenv.config();
 
 const app = express();
+const PORT = process.env.PORT || 10000;
+
 app.use(cors());
 app.use(express.json());
 app.use(express.static("public"));
 
-const port = process.env.PORT || 10000;
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
+app.get("/", (req, res) => {
+  res.sendFile("index.html", { root: "./public" });
 });
 
-// Endpoint para procesar mensajes de Alejandro iA
-app.post("/chat", async (req, res) => {
-  const { message, context } = req.body;
-
+// Endpoint para recibir mensajes del chat
+app.post("/api/message", async (req, res) => {
   try {
-    // Llamada al modelo GPT-4.1 mini
-    const response = await openai.chat.completions.create({
-      model: "gpt-4.1-mini",
-      messages: [
-        ...(context || []),
-        { role: "user", content: message }
-      ]
-    });
+    const { userMessage, userData } = req.body;
 
-    const reply = response.choices[0].message.content;
+    // Aquí puedes integrar GPT-4.1 mini para la respuesta
+    // Ejemplo simplificado:
+    let botResponse = "";
 
-    // Detectar si el reply incluye send_lead o send_email
-    if (reply.includes("send_lead")) {
-      const leadMatch = reply.match(/send_lead\((.*)\)/s);
-      if (leadMatch) {
-        const leadData = JSON.parse(leadMatch[1]);
-        await send_lead(leadData);
-      }
+    if (!userData?.name || !userData?.phone) {
+      botResponse = "⚠️ Necesitamos al menos tu nombre y teléfono para continuar.";
+    } else {
+      botResponse = `Hola ${userData.name}, gracias por tus datos. ¿Deseas que te enviemos la propuesta formal por correo?`;
+      // Llamada a función send_lead
+      await send_lead(userData);
     }
 
-    if (reply.includes("send_email")) {
-      const emailMatch = reply.match(/send_email\((.*)\)/s);
-      if (emailMatch) {
-        const emailData = JSON.parse(emailMatch[1]);
-        await send_email(emailData);
-      }
-    }
-
-    res.json({ reply });
-
-  } catch (error) {
-    console.error("Error en chat:", error.message);
-    res.status(500).json({ error: error.message });
+    res.json({ response: botResponse });
+  } catch (err) {
+    console.error("Error en /api/message:", err);
+    res.status(500).json({ error: "Error procesando el mensaje." });
   }
 });
 
-app.listen(port, () => {
-  console.log(`Servidor corriendo en puerto ${port}`);
+app.listen(PORT, () => {
+  console.log(`Servidor corriendo en puerto ${PORT}`);
 });
