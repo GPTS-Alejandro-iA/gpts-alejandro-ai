@@ -1,54 +1,44 @@
-import fetch from "node-fetch";
+import fetch from "node-fetch"; // Si Node v22, fetch ya está global
 import nodemailer from "nodemailer";
-import dotenv from "dotenv";
 
-dotenv.config();
-
-// ================= HubSpot Lead =================
-export async function send_lead({ name, email, phone, message, bestTime, address }) {
+// --- HubSpot Lead ---
+export async function send_lead({ name, phone, bestTime, address }) {
   const HUBSPOT_TOKEN = process.env.HUBSPOT_TOKEN;
 
   const url = "https://api.hubapi.com/crm/v3/objects/contacts";
 
-  const body = {
+  const data = {
     properties: {
-      email: email || `${phone}@noemail.com`, // si no hay email
       firstname: name,
-      phone,
-      address,
-      message,
-      best_time_to_call: bestTime,
+      phone: phone,
+      address: address || "",
+      best_time_to_call: bestTime || "",
     },
   };
 
-  try {
-    const resp = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${HUBSPOT_TOKEN}`,
-      },
-      body: JSON.stringify(body),
-    });
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${HUBSPOT_TOKEN}`,
+    },
+    body: JSON.stringify(data),
+  });
 
-    if (!resp.ok) {
-      const errText = await resp.text();
-      throw new Error(`HubSpot API error: ${errText}`);
-    }
-
-    console.log("Lead enviado a HubSpot correctamente");
-    return await resp.json();
-  } catch (err) {
-    console.error("Error enviando lead a HubSpot:", err);
-    throw err;
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error("Error enviando lead a HubSpot:", errorText);
+    throw new Error(`HubSpot API error: ${errorText}`);
   }
+
+  return await response.json();
 }
 
-// ================= Envío de correo =================
-export async function send_email({ to, subject, text }) {
+// --- Envío de Email ---
+export async function send_email({ name, phone, bestTime, address }) {
   const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
-    port: parseInt(process.env.SMTP_PORT),
+    port: process.env.SMTP_PORT,
     secure: process.env.SMTP_SECURE === "true",
     auth: {
       user: process.env.SMTP_USER,
@@ -56,18 +46,12 @@ export async function send_email({ to, subject, text }) {
     },
   });
 
-  try {
-    const info = await transporter.sendMail({
-      from: `"Green Power Tech Store" <${process.env.SMTP_USER}>`,
-      to,
-      subject,
-      text,
-    });
+  const mailOptions = {
+    from: `"Alejandro iA" <${process.env.SMTP_USER}>`,
+    to: process.env.LEADS_EMAIL,
+    subject: "Nuevo Lead de Alejandro iA",
+    text: `Nombre: ${name}\nTeléfono: ${phone}\nHora: ${bestTime}\nDirección: ${address || ""}`,
+  };
 
-    console.log("Correo enviado:", info.messageId);
-    return info;
-  } catch (err) {
-    console.error("Error enviando correo:", err);
-    throw err;
-  }
+  await transporter.sendMail(mailOptions);
 }
