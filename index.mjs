@@ -1,42 +1,39 @@
 import express from "express";
 import cors from "cors";
-import dotenv from "dotenv";
+import bodyParser from "body-parser";
 import { send_lead, send_email } from "./functions.js";
-
-dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 10000;
 
+// Middlewares
 app.use(cors());
-app.use(express.json());
-app.use(express.static("public"));
+app.use(bodyParser.json());
 
+// Ruta de prueba
 app.get("/", (req, res) => {
-  res.sendFile("index.html", { root: "./public" });
+  res.send("Alejandro iA Webchat está corriendo 🎉");
 });
 
-// Endpoint para recibir mensajes del chat
-app.post("/api/message", async (req, res) => {
+// Ruta para recibir leads desde el chat
+app.post("/lead", async (req, res) => {
   try {
-    const { userMessage, userData } = req.body;
+    const { name, phone, bestTime, address } = req.body;
 
-    // Aquí puedes integrar GPT-4.1 mini para la respuesta
-    // Ejemplo simplificado:
-    let botResponse = "";
-
-    if (!userData?.name || !userData?.phone) {
-      botResponse = "⚠️ Necesitamos al menos tu nombre y teléfono para continuar.";
-    } else {
-      botResponse = `Hola ${userData.name}, gracias por tus datos. ¿Deseas que te enviemos la propuesta formal por correo?`;
-      // Llamada a función send_lead
-      await send_lead(userData);
+    if (!name || !phone) {
+      return res.status(400).json({ error: "Se requiere al menos nombre y teléfono" });
     }
 
-    res.json({ response: botResponse });
+    // Enviar lead a HubSpot
+    await send_lead({ name, phone, bestTime, address });
+
+    // Enviar email (opcional)
+    await send_email({ name, phone, bestTime, address });
+
+    return res.json({ success: true, message: "Lead enviado correctamente" });
   } catch (err) {
-    console.error("Error en /api/message:", err);
-    res.status(500).json({ error: "Error procesando el mensaje." });
+    console.error("Error procesando lead:", err);
+    return res.status(500).json({ error: err.message });
   }
 });
 
