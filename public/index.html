@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Alejandro iA - Green Power Tech</title>
+
   <style>
     body {
       margin: 0;
@@ -14,6 +15,7 @@
       align-items: center;
       height: 100vh;
     }
+
     .chat-container {
       width: 100%;
       max-width: 500px;
@@ -25,6 +27,7 @@
       overflow: hidden;
       box-shadow: 0 4px 10px rgba(0,0,0,0.2);
     }
+
     .chat-header {
       background: #075e54;
       color: white;
@@ -35,9 +38,11 @@
       font-size: 18px;
       font-weight: bold;
     }
+
     .chat-header img {
       height: 40px;
     }
+
     .chat-messages {
       flex: 1;
       padding: 15px;
@@ -46,6 +51,7 @@
       display: flex;
       flex-direction: column;
     }
+
     .message {
       max-width: 80%;
       margin-bottom: 12px;
@@ -54,21 +60,25 @@
       font-size: 15px;
       line-height: 1.4;
     }
+
     .user-message {
       align-self: flex-end;
       background: #dcf8c6;
     }
+
     .bot-message {
       align-self: flex-start;
       background: white;
       border: solid 1px #ddd;
     }
+
     .chat-input {
       display: flex;
       padding: 12px;
       background: #f0f0f0;
       border-top: solid 1px #ccc;
     }
+
     .chat-input input {
       flex: 1;
       padding: 12px;
@@ -77,6 +87,7 @@
       font-size: 16px;
       outline: none;
     }
+
     .chat-input button {
       margin-left: 10px;
       padding: 10px 20px;
@@ -87,6 +98,7 @@
       cursor: pointer;
       font-size: 16px;
     }
+
     .chat-input button:hover {
       background: #054c42;
     }
@@ -94,24 +106,39 @@
 </head>
 <body>
   <div class="chat-container">
+
     <div class="chat-header">
       Alejandro iA
       <img src="https://greenpowertech.store/cdn/shop/files/gpt_logo_transp.png" alt="Logo" />
     </div>
-    <div class="chat-messages" id="chatMessages"></div>
+
+    <div class="chat-messages" id="chatMessages">
+      <div class="message bot-message">
+        👋 ¡Hola! Soy Alejandro iA, tu asesor solar de Green Power Tech.  
+        Para empezar, cuéntame: ¿Cuál de nuestros sistemas le interesa conocer más?
+        <br>• 1.🔆 Energía Solar Fuera de la red para residencias o negocios
+        <br>• 2.⚡ Backups de Alta Capacidad para apartamentos u oficinas
+      </div>
+    </div>
+
     <div class="chat-input">
       <input type="text" id="messageInput" placeholder="Escribe tu mensaje..." />
       <button onclick="sendMessage()">Enviar</button>
     </div>
+
   </div>
 
   <script>
     const chatMessages = document.getElementById("chatMessages");
     const messageInput = document.getElementById("messageInput");
 
-    let conversationState = {
-      step: "greeting", // greeting -> systemSelection -> collectContact -> orient
-      clientData: {}
+    // Guardar info mínima del cliente
+    let clientInfo = {
+      name: "",
+      phone: "",
+      email: "",
+      address: "",
+      bestTime: ""
     };
 
     function appendMessage(text, className) {
@@ -122,74 +149,9 @@
       chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 
-    function startConversation() {
-      appendMessage("👋 ¡Hola! Soy Alejandro iA, tu asesor solar de Green Power Tech 🌞\nPara comenzar, ¿cuál de nuestros sistemas le interesa conocer más?\n• 1.🔆 Energía Solar Fuera de la red\n• 2.⚡ Backups de Alta Capacidad", "bot-message");
-    }
-
     async function sendMessage() {
       const message = messageInput.value.trim();
       if (!message) return;
+
       appendMessage(message, "user-message");
-      messageInput.value = "";
-
-      // Lógica de pasos
-      if (conversationState.step === "greeting") {
-        conversationState.step = "systemSelection";
-        conversationState.clientData.systemChoice = message;
-        appendMessage("Perfecto. Para ofrecerle orientación adecuada, por favor compárteme tu nombre y teléfono.", "bot-message");
-        conversationState.step = "collectContact";
-        return;
-      }
-
-      if (conversationState.step === "collectContact") {
-        const parts = message.split(/,|;/);
-        conversationState.clientData.name = parts[0]?.trim();
-        conversationState.clientData.phone = parts[1]?.trim();
-        conversationState.clientData.address = parts[2]?.trim() || "";
-        conversationState.clientData.bestTime = parts[3]?.trim() || "";
-
-        if (!conversationState.clientData.name || !conversationState.clientData.phone) {
-          appendMessage("⚠️ Por favor proporciona al menos tu nombre y teléfono para continuar.", "bot-message");
-          return;
-        }
-
-        // Enviar lead al backend
-        try {
-          await fetch("/send_lead", {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify(conversationState.clientData)
-          });
-        } catch(e) {
-          appendMessage("❌ Error registrando tu información.", "bot-message");
-        }
-
-        conversationState.step = "orient";
-        appendMessage("Gracias por compartir tu información. Ahora, cuéntame más sobre qué necesitas: Energía Solar o Backups.", "bot-message");
-        return;
-      }
-
-      // Paso orientativo final
-      if (conversationState.step === "orient") {
-        try {
-          const response = await fetch("/chat", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ message, ...conversationState.clientData })
-          });
-          const data = await response.json();
-          appendMessage(data.reply || "No pude generar respuesta.", "bot-message");
-        } catch (err) {
-          appendMessage("❌ Error enviando el mensaje.", "bot-message");
-        }
-      }
-    }
-
-    messageInput.addEventListener("keypress", (e) => {
-      if (e.key === "Enter") sendMessage();
-    });
-
-    startConversation();
-  </script>
-</body>
-</html>
+      mess
