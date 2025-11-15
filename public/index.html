@@ -1,151 +1,147 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Alejandro iA - Green Power Tech Store</title>
-<style>
-  body {
-    font-family: Arial, sans-serif;
-    background-color: #e6f0ff;
-    margin: 0;
-    padding: 0;
-  }
-  header {
-    background-color: #004aad;
-    color: #fff;
-    text-align: center;
-    padding: 1rem;
-  }
-  header h1 {
-    margin: 0;
-    font-size: 1.5rem;
-  }
-  header h2 {
-    margin: 0;
-    font-size: 1.2rem;
-    font-weight: normal;
-    margin-top: 0.3rem;
-  }
-  #chat-container {
-    max-width: 600px;
-    margin: 1rem auto;
-    background: #fff;
-    border-radius: 10px;
-    padding: 1rem;
-    height: 70vh;
-    overflow-y: auto;
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
-  }
-  .message {
-    margin: 0.5rem 0;
-    padding: 0.5rem 1rem;
-    border-radius: 20px;
-    max-width: 80%;
-    word-wrap: break-word;
-  }
-  .user {
-    background-color: #cce0ff;
-    align-self: flex-end;
-    margin-left: auto;
-  }
-  .bot {
-    background-color: #004aad;
-    color: #fff;
-    align-self: flex-start;
-    margin-right: auto;
-  }
-  #input-container {
-    display: flex;
-    max-width: 600px;
-    margin: 0 auto 1rem;
-  }
-  #user-input {
-    flex: 1;
-    padding: 0.5rem;
-    border-radius: 20px;
-    border: 1px solid #ccc;
-    outline: none;
-  }
-  #send-btn {
-    padding: 0.5rem 1rem;
-    margin-left: 0.5rem;
-    background-color: #004aad;
-    color: #fff;
-    border: none;
-    border-radius: 20px;
-    cursor: pointer;
-  }
-  #send-btn:hover {
-    background-color: #003380;
-  }
-  #chat-messages {
-    display: flex;
-    flex-direction: column;
-  }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Alejandro iA - Green Power Tech Store</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f0f4f8;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 0;
+      height: 100vh;
+    }
+    header {
+      text-align: center;
+      margin-top: 20px;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 2rem;
+      color: #1a73e8;
+    }
+    header h2 {
+      margin: 5px 0 20px 0;
+      font-size: 1.5rem;
+      color: #1a73e8;
+    }
+    #chat-container {
+      background-color: #fff;
+      width: 95%;
+      max-width: 500px;
+      flex: 1;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    #messages {
+      flex: 1;
+      padding: 15px;
+      overflow-y: auto;
+    }
+    .message {
+      margin-bottom: 15px;
+      padding: 10px 15px;
+      border-radius: 20px;
+      max-width: 80%;
+      word-wrap: break-word;
+    }
+    .user {
+      background-color: #e8f0fe;
+      color: #0b3d91;
+      align-self: flex-end;
+      border-bottom-right-radius: 0;
+    }
+    .assistant {
+      background-color: #1a73e8;
+      color: #fff;
+      align-self: flex-start;
+      border-bottom-left-radius: 0;
+    }
+    form {
+      display: flex;
+      border-top: 1px solid #ddd;
+    }
+    input[type="text"] {
+      flex: 1;
+      padding: 10px 15px;
+      border: none;
+      outline: none;
+      font-size: 1rem;
+    }
+    button {
+      background-color: #1a73e8;
+      color: white;
+      border: none;
+      padding: 0 20px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    button:hover {
+      background-color: #155ab6;
+    }
+  </style>
 </head>
 <body>
+  <header>
+    <h1>Alejandro iA</h1>
+    <h2>Green Power Tech Store ☀️</h2>
+  </header>
 
-<header>
-  <h1>¡Hola! Soy Alejandro iA y seré tu Asesor Digital Inteligente de</h1>
-  <h2>Green Power Tech Store ☀️</h2>
-</header>
+  <div id="chat-container">
+    <div id="messages"></div>
+    <form id="chat-form">
+      <input type="text" id="message-input" placeholder="Escribe tu mensaje..." required />
+      <button type="submit">Enviar</button>
+    </form>
+  </div>
 
-<div id="chat-container">
-  <div id="chat-messages"></div>
-</div>
+  <script>
+    const form = document.getElementById("chat-form");
+    const input = document.getElementById("message-input");
+    const messages = document.getElementById("messages");
 
-<div id="input-container">
-  <input type="text" id="user-input" placeholder="Escribe tu mensaje aquí..." />
-  <button id="send-btn">Enviar</button>
-</div>
+    function addMessage(text, sender) {
+      const div = document.createElement("div");
+      div.classList.add("message", sender);
+      div.textContent = text;
+      messages.appendChild(div);
+      messages.scrollTop = messages.scrollHeight;
+    }
 
-<script>
-const chatMessages = document.getElementById('chat-messages');
-const userInput = document.getElementById('user-input');
-const sendBtn = document.getElementById('send-btn');
+    async function sendMessage(message) {
+      addMessage(message, "user");
+      input.value = "";
+      try {
+        const res = await fetch("/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message, context: [] })
+        });
+        const data = await res.json();
+        if (data.reply) {
+          addMessage(data.reply, "assistant");
+        }
+      } catch (error) {
+        addMessage("Error: No se pudo conectar con el servidor.", "assistant");
+        console.error(error);
+      }
+    }
 
-// Generar un sessionId único por cliente
-const sessionId = Date.now() + Math.floor(Math.random() * 1000);
-
-function addMessage(text, sender) {
-  const div = document.createElement('div');
-  div.classList.add('message', sender);
-  div.textContent = text;
-  chatMessages.appendChild(div);
-  chatMessages.scrollTop = chatMessages.scrollHeight;
-}
-
-// Inicial saludo
-addMessage("👋 ¡Hola! Soy Alejandro iA, tu asesor solar de Green Power Tech. Para empezar, ¿cuál de nuestros sistemas le interesa conocer más?\n• 1.🔆 Energía Solar Fuera de la red\n• 2.⚡ Backups de Alta Capacidad", 'bot');
-
-async function sendMessage() {
-  const message = userInput.value.trim();
-  if (!message) return;
-
-  addMessage(message, 'user');
-  userInput.value = '';
-
-  try {
-    const res = await fetch('/message', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sessionId, message })
+    form.addEventListener("submit", e => {
+      e.preventDefault();
+      const msg = input.value.trim();
+      if (msg) sendMessage(msg);
     });
-    const data = await res.json();
-    if (data.reply) addMessage(data.reply, 'bot');
-  } catch (err) {
-    addMessage("Error en la comunicación con el servidor.", 'bot');
-    console.error(err);
-  }
-}
 
-sendBtn.addEventListener('click', sendMessage);
-userInput.addEventListener('keypress', e => {
-  if (e.key === 'Enter') sendMessage();
-});
-</script>
-
+    // Mensaje inicial de bienvenida
+    addMessage("👋 ¡Hola! Soy Alejandro iA, tu asesor solar de Green Power Tech Store. Para empezar, ¿cuál de nuestros sistemas le interesa conocer más?\n• 1.🔆 Energía Solar Fuera de la red\n• 2.⚡ Backups de Alta Capacidad", "assistant");
+  </script>
 </body>
 </html>
