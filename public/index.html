@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Alejandro iA - Green Power Tech</title>
-
   <style>
     body {
       margin: 0;
@@ -106,7 +105,6 @@
 </head>
 <body>
   <div class="chat-container">
-
     <div class="chat-header">
       Alejandro iA
       <img src="https://greenpowertech.store/cdn/shop/files/gpt_logo_transp.png" alt="Logo" />
@@ -115,9 +113,9 @@
     <div class="chat-messages" id="chatMessages">
       <div class="message bot-message">
         👋 ¡Hola! Soy Alejandro iA, tu asesor solar de Green Power Tech.  
-        Para empezar, cuéntame: ¿Cuál de nuestros sistemas le interesa conocer más?
-        <br>• 1.🔆 Energía Solar Fuera de la red para residencias o negocios
-        <br>• 2.⚡ Backups de Alta Capacidad para apartamentos u oficinas
+        Para empezar, ¿cuál de nuestros sistemas le interesa conocer más?
+        <br>• 1.🔆 Energía Solar Fuera de la red
+        <br>• 2.⚡ Backups de Alta Capacidad
       </div>
     </div>
 
@@ -125,21 +123,11 @@
       <input type="text" id="messageInput" placeholder="Escribe tu mensaje..." />
       <button onclick="sendMessage()">Enviar</button>
     </div>
-
   </div>
 
   <script>
     const chatMessages = document.getElementById("chatMessages");
     const messageInput = document.getElementById("messageInput");
-
-    // Guardar info mínima del cliente
-    let clientInfo = {
-      name: "",
-      phone: "",
-      email: "",
-      address: "",
-      bestTime: ""
-    };
 
     function appendMessage(text, className) {
       const div = document.createElement("div");
@@ -154,4 +142,25 @@
       if (!message) return;
 
       appendMessage(message, "user-message");
-      mess
+      messageInput.value = "";
+
+      try {
+        const response = await fetch("/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message, name: "", phone: "", email: "", address: "", bestTime: "" })
+        });
+
+        const data = await response.json();
+        appendMessage(data.reply || "No pude generar respuesta.", "bot-message");
+      } catch (err) {
+        appendMessage("❌ Error enviando el mensaje.", "bot-message");
+      }
+    }
+
+    messageInput.addEventListener("keypress", e => {
+      if (e.key === "Enter") sendMessage();
+    });
+  </script>
+</body>
+</html>
