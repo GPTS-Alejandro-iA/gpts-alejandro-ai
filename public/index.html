@@ -1,185 +1,151 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Alejandro iA - Green Power Tech Store</title>
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #ece5dd;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-    }
-
-    .chat-container {
-      width: 100%;
-      max-width: 500px;
-      height: 90vh;
-      background: #e0f2ff; /* azul suave de fondo */
-      display: flex;
-      flex-direction: column;
-      border-radius: 12px;
-      overflow: hidden;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-    }
-
-    .chat-header {
-      background: #0073e6; /* azul de tu tienda */
-      color: white;
-      padding: 15px;
-      text-align: center;
-      font-size: 20px;
-      font-weight: bold;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-
-    .chat-header .company {
-      font-size: 16px;
-      margin-top: 4px;
-      text-align: center;
-      font-weight: normal;
-    }
-
-    .chat-messages {
-      flex: 1;
-      padding: 15px;
-      overflow-y: auto;
-      background: #cce6ff; /* azul más claro para mensajes */
-      display: flex;
-      flex-direction: column;
-    }
-
-    .message {
-      max-width: 80%;
-      margin-bottom: 12px;
-      padding: 10px 14px;
-      border-radius: 16px;
-      font-size: 15px;
-      line-height: 1.4;
-    }
-
-    .user-message {
-      align-self: flex-end;
-      background: #99ccff; /* azul usuario */
-    }
-
-    .bot-message {
-      align-self: flex-start;
-      background: #ffffff;
-      border: solid 1px #0073e6; /* borde azul bot */
-    }
-
-    .chat-input {
-      display: flex;
-      padding: 12px;
-      background: #f0f0f0;
-      border-top: solid 1px #ccc;
-    }
-
-    .chat-input input {
-      flex: 1;
-      padding: 12px;
-      border-radius: 20px;
-      border: 1px solid #ccc;
-      font-size: 16px;
-      outline: none;
-    }
-
-    .chat-input button {
-      margin-left: 10px;
-      padding: 10px 20px;
-      background: #0073e6;
-      color: white;
-      border: none;
-      border-radius: 20px;
-      cursor: pointer;
-      font-size: 16px;
-    }
-
-    .chat-input button:hover {
-      background: #005bb5;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Alejandro iA - Green Power Tech Store</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background-color: #e6f0ff;
+    margin: 0;
+    padding: 0;
+  }
+  header {
+    background-color: #004aad;
+    color: #fff;
+    text-align: center;
+    padding: 1rem;
+  }
+  header h1 {
+    margin: 0;
+    font-size: 1.5rem;
+  }
+  header h2 {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: normal;
+    margin-top: 0.3rem;
+  }
+  #chat-container {
+    max-width: 600px;
+    margin: 1rem auto;
+    background: #fff;
+    border-radius: 10px;
+    padding: 1rem;
+    height: 70vh;
+    overflow-y: auto;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  }
+  .message {
+    margin: 0.5rem 0;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    max-width: 80%;
+    word-wrap: break-word;
+  }
+  .user {
+    background-color: #cce0ff;
+    align-self: flex-end;
+    margin-left: auto;
+  }
+  .bot {
+    background-color: #004aad;
+    color: #fff;
+    align-self: flex-start;
+    margin-right: auto;
+  }
+  #input-container {
+    display: flex;
+    max-width: 600px;
+    margin: 0 auto 1rem;
+  }
+  #user-input {
+    flex: 1;
+    padding: 0.5rem;
+    border-radius: 20px;
+    border: 1px solid #ccc;
+    outline: none;
+  }
+  #send-btn {
+    padding: 0.5rem 1rem;
+    margin-left: 0.5rem;
+    background-color: #004aad;
+    color: #fff;
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+  }
+  #send-btn:hover {
+    background-color: #003380;
+  }
+  #chat-messages {
+    display: flex;
+    flex-direction: column;
+  }
+</style>
 </head>
 <body>
-  <div class="chat-container">
 
-    <div class="chat-header">
-      Alejandro iA
-      <div class="company">Green Power Tech Store ☀️</div>
-    </div>
+<header>
+  <h1>¡Hola! Soy Alejandro iA y seré tu Asesor Digital Inteligente de</h1>
+  <h2>Green Power Tech Store ☀️</h2>
+</header>
 
-    <div class="chat-messages" id="chatMessages">
-      <div class="message bot-message">
-        👋 ¡Hola! Soy Alejandro iA, tu asesor solar de Green Power Tech. Para empezar, ¿cuál de nuestros sistemas le interesa conocer más?
-        <br>• 1.🔆 Energía Solar Fuera de la red
-        <br>• 2.⚡ Backups de Alta Capacidad
-      </div>
-    </div>
+<div id="chat-container">
+  <div id="chat-messages"></div>
+</div>
 
-    <div class="chat-input">
-      <input type="text" id="messageInput" placeholder="Escribe tu mensaje..." />
-      <button onclick="sendMessage()">Enviar</button>
-    </div>
+<div id="input-container">
+  <input type="text" id="user-input" placeholder="Escribe tu mensaje aquí..." />
+  <button id="send-btn">Enviar</button>
+</div>
 
-  </div>
+<script>
+const chatMessages = document.getElementById('chat-messages');
+const userInput = document.getElementById('user-input');
+const sendBtn = document.getElementById('send-btn');
 
-  <script>
-    const chatMessages = document.getElementById("chatMessages");
-    const messageInput = document.getElementById("messageInput");
+// Generar un sessionId único por cliente
+const sessionId = Date.now() + Math.floor(Math.random() * 1000);
 
-    function appendMessage(text, className) {
-      const div = document.createElement("div");
-      div.className = `message ${className}`;
-      div.innerHTML = text;
-      chatMessages.appendChild(div);
-      chatMessages.scrollTop = chatMessages.scrollHeight;
-    }
+function addMessage(text, sender) {
+  const div = document.createElement('div');
+  div.classList.add('message', sender);
+  div.textContent = text;
+  chatMessages.appendChild(div);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
 
-    async function sendMessage() {
-      const message = messageInput.value.trim();
-      if (!message) return;
+// Inicial saludo
+addMessage("👋 ¡Hola! Soy Alejandro iA, tu asesor solar de Green Power Tech. Para empezar, ¿cuál de nuestros sistemas le interesa conocer más?\n• 1.🔆 Energía Solar Fuera de la red\n• 2.⚡ Backups de Alta Capacidad", 'bot');
 
-      appendMessage(message, "user-message");
-      messageInput.value = "";
+async function sendMessage() {
+  const message = userInput.value.trim();
+  if (!message) return;
 
-      try {
-        const response = await fetch("/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            message,
-            phone: localStorage.getItem("phone") || "",
-            name: localStorage.getItem("name") || "",
-            email: localStorage.getItem("email") || "",
-            bestTime: localStorage.getItem("bestTime") || "",
-            address: localStorage.getItem("address") || ""
-          })
-        });
+  addMessage(message, 'user');
+  userInput.value = '';
 
-        const data = await response.json();
-        appendMessage(data.reply || "No pude generar respuesta.", "bot-message");
-
-        // Guardar datos de contacto del cliente
-        const phoneMatch = message.match(/\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/);
-        const nameMatch = message.match(/([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+\s[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)/);
-        if (phoneMatch) localStorage.setItem("phone", phoneMatch[0]);
-        if (nameMatch) localStorage.setItem("name", nameMatch[0]);
-
-      } catch (err) {
-        appendMessage("❌ Error enviando el mensaje.", "bot-message");
-      }
-    }
-
-    messageInput.addEventListener("keypress", (e) => {
-      if (e.key === "Enter") sendMessage();
+  try {
+    const res = await fetch('/message', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionId, message })
     });
-  </script>
+    const data = await res.json();
+    if (data.reply) addMessage(data.reply, 'bot');
+  } catch (err) {
+    addMessage("Error en la comunicación con el servidor.", 'bot');
+    console.error(err);
+  }
+}
+
+sendBtn.addEventListener('click', sendMessage);
+userInput.addEventListener('keypress', e => {
+  if (e.key === 'Enter') sendMessage();
+});
+</script>
+
 </body>
 </html>
