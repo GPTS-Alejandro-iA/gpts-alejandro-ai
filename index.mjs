@@ -1,28 +1,38 @@
 import express from "express";
 import cors from "cors";
+import bodyParser from "body-parser";
 import dotenv from "dotenv";
 import { send_lead, send_email } from "./functions.js";
 
 dotenv.config();
+
 const app = express();
+const PORT = process.env.PORT || 10000;
+
 app.use(cors());
-app.use(express.json());
+app.use(bodyParser.json());
 app.use(express.static("public"));
 
 app.post("/chat", async (req, res) => {
-  const { message } = req.body;
+  const { message, leadData, emailData } = req.body;
 
-  // Aquí llamas a tu Assistant Alejandro Ai usando OpenAI Responses API
-  // Ejemplo:
-  const reply = await callAlejandroAi(message);
+  // Aquí integrarías tu llamada al modelo GPT-4.1 con message
+  // Para simulación:
+  let responseText = "Hola 👋, soy Alejandro Ai. ¿En qué sistema estás interesado?";
 
-  res.json({ reply });
+  // Captación de lead
+  if (leadData && leadData.name && leadData.phone) {
+    await send_lead(leadData);
+  }
+
+  // Envío de correo
+  if (emailData && emailData.to && emailData.subject && emailData.text) {
+    await send_email(emailData);
+  }
+
+  res.json({ reply: responseText });
 });
 
-async function callAlejandroAi(message) {
-  // Implementación según tu integración actual con Responses API
-  return "Respuesta simulada de Alejandro Ai: " + message;
-}
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
