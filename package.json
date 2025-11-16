@@ -1,16 +1,17 @@
 {
   "name": "alejandro-ia-webchat",
   "version": "1.0.0",
+  "description": "Asistente solar emocional de Green Power Tech Store",
+  "main": "index.mjs",
   "type": "module",
   "scripts": {
     "start": "node index.mjs"
   },
   "dependencies": {
+    "dotenv": "^17.2.3",
     "express": "^4.18.2",
-    "cors": "^2.8.5",
-    "body-parser": "^1.20.2",
-    "nodemailer": "^6.9.3",
     "node-fetch": "^3.3.2",
-    "dotenv": "^17.2.3"
+    "nodemailer": "^6.9.4",
+    "openai": "^4.0.0"
   }
 }
