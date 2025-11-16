@@ -6,21 +6,25 @@ function addMessage(text, sender) {
   div.className = `message ${sender}`;
   div.innerText = text;
   chat.appendChild(div);
-  chat.scrollTop = chat.scrollHeight;
+  chat.scrollTop = chat.scrollHeight; // mantiene siempre en el último mensaje
 }
 
 async function sendMessage() {
-  const message = input.value;
+  const message = input.value.trim();
   if (!message) return;
   addMessage(message, "user");
   input.value = "";
 
-  const response = await fetch("/chat", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ message })
-  });
-
-  const data = await response.json();
-  addMessage(data.reply, "bot");
+  try {
+    const response = await fetch("/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message })
+    });
+    const data = await response.json();
+    addMessage(data.reply, "bot");
+  } catch (err) {
+    addMessage("⚠️ Error de conexión. Intenta nuevamente.", "bot");
+    console.error(err);
+  }
 }
