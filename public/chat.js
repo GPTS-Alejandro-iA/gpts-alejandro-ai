@@ -1,43 +1,26 @@
-const chatBox = document.getElementById("chat-box");
-const chatForm = document.getElementById("chat-form");
-const userInput = document.getElementById("user-input");
+const chat = document.getElementById("chat");
+const input = document.getElementById("userInput");
 
-chatForm.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const message = userInput.value.trim();
+function addMessage(text, sender) {
+  const div = document.createElement("div");
+  div.className = `message ${sender}`;
+  div.innerText = text;
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+async function sendMessage() {
+  const message = input.value;
   if (!message) return;
+  addMessage(message, "user");
+  input.value = "";
 
-  appendMessage(message, "user-message");
-  userInput.value = "";
-  chatBox.scrollTop = chatBox.scrollHeight;
+  const response = await fetch("/chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message })
+  });
 
-  appendMessage("Alejandro Ai está escribiendo...", "bot-message", true);
-
-  try {
-    const response = await fetch("/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message })
-    });
-
-    const data = await response.json();
-    const botMessageEl = chatBox.querySelector(".bot-message.typing");
-    if (botMessageEl) botMessageEl.remove();
-
-    appendMessage(data.reply, "bot-message");
-    chatBox.scrollTop = chatBox.scrollHeight;
-
-  } catch (err) {
-    console.error(err);
-    const botMessageEl = chatBox.querySelector(".bot-message.typing");
-    if (botMessageEl) botMessageEl.textContent = "Error al enviar el mensaje.";
-  }
-});
-
-function appendMessage(text, className, typing=false) {
-  const messageEl = document.createElement("div");
-  messageEl.classList.add("message", className);
-  if (typing) messageEl.classList.add("typing");
-  messageEl.textContent = text;
-  chatBox.appendChild(messageEl);
+  const data = await response.json();
+  addMessage(data.reply, "bot");
 }
