@@ -1,81 +1,65 @@
-// functions.js
 import fetch from "node-fetch";
 import nodemailer from "nodemailer";
 
-// Configuración de HubSpot desde variables de entorno
-const HUBSPOT_TOKEN = process.env.HUBSPOT_TOKEN;
+// ====== SEND LEAD A HUBSPOT ======
+export async function send_lead({ name, phone, email, address, preferred_time }) {
+  const HUBSPOT_API_KEY = process.env.HUBSPOT_API_KEY;
+  const url = `https://api.hubapi.com/crm/v3/objects/contacts`;
 
-// Configuración de Nodemailer desde variables de entorno
-const EMAIL_USER = process.env.EMAIL_USER;
-const EMAIL_PASS = process.env.EMAIL_PASS;
-const EMAIL_TO = process.env.EMAIL_TO; // Dirección que recibirá los leads
-
-// Función para enviar lead a HubSpot
-export async function send_lead({ name, email, phone, message }) {
-  try {
-    const url = "https://api.hubapi.com/crm/v3/objects/contacts";
-
-    const body = {
-      properties: {
-        firstname: name,
-        email: email,
-        phone: phone || "",
-        message: message || "",
-      },
-    };
-
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${HUBSPOT_TOKEN}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(`HubSpot API error: ${JSON.stringify(data)}`);
+  const body = {
+    properties: {
+      firstname: name.split(" ")[0] || "",
+      lastname: name.split(" ").slice(1).join(" ") || "",
+      phone: phone || "",
+      email: email || "",
+      address: address || "",
+      hs_lead_status: "New",
+      preferred_contact_time: preferred_time || ""
     }
+  };
 
-    console.log("Lead enviado a HubSpot:", data);
-    return data;
-  } catch (error) {
-    console.error("Error enviando lead a HubSpot:", error);
-    throw error;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${HUBSPOT_API_KEY}`
+    },
+    body: JSON.stringify(body)
+  });
+
+  if (!response.ok) {
+    console.error("Error sending lead to HubSpot:", await response.text());
+    return false;
   }
+
+  const data = await response.json();
+  console.log("Lead sent to HubSpot:", data);
+  return data;
 }
 
-// Función para enviar correo
-export async function send_email({ name, email, phone, message }) {
+// ====== SEND EMAIL ======
+export async function send_email({ to, subject, text }) {
+  const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: process.env.EMAIL_USER, // tu gmail
+      pass: process.env.EMAIL_PASS  // app password
+    }
+  });
+
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to,
+    subject,
+    text
+  };
+
   try {
-    const transporter = nodemailer.createTransport({
-      service: "gmail", // o el que uses
-      auth: {
-        user: EMAIL_USER,
-        pass: EMAIL_PASS,
-      },
-    });
-
-    const mailOptions = {
-      from: EMAIL_USER,
-      to: EMAIL_TO,
-      subject: `Nuevo Lead de ${name}`,
-      html: `
-        <h2>Nuevo Lead recibido</h2>
-        <p><strong>Nombre:</strong> ${name}</p>
-        <p><strong>Email:</strong> ${email}</p>
-        <p><strong>Teléfono:</strong> ${phone || "No proporcionado"}</p>
-        <p><strong>Mensaje:</strong> ${message || "No proporcionado"}</p>
-      `,
-    };
-
     const info = await transporter.sendMail(mailOptions);
-    console.log("Correo enviado:", info.messageId);
+    console.log("Email sent:", info.response);
     return info;
-  } catch (error) {
-    console.error("Error enviando correo:", error);
-    throw error;
+  } catch (err) {
+    console.error("Error sending email:", err);
+    return false;
   }
 }
