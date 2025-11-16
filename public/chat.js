@@ -10,15 +10,8 @@ function addMessage(msg, sender) {
   chatBox.scrollTop = chatBox.scrollHeight;
 }
 
-// Saludo inicial de Alejandro Ai
-window.addEventListener("load", async () => {
-  try {
-    const res = await fetch("/");
-    const greeting = await res.text();
-    addMessage(greeting, "bot");
-  } catch (err) {
-    addMessage("⚠️ Error al cargar saludo inicial", "bot");
-  }
+window.addEventListener("load", () => {
+  addMessage("🌞 ¡Bienvenido a Green Power Tech Store! Soy Alejandro iA. ¿En qué sistema estás interesado?", "bot");
 });
 
 async function sendMessage() {
@@ -40,7 +33,6 @@ async function sendMessage() {
   }
 }
 
-// Botón y Enter
 sendBtn.addEventListener("click", sendMessage);
 input.addEventListener("keypress", (e) => {
   if (e.key === "Enter") sendMessage();
