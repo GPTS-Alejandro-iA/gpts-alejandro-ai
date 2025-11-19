@@ -1,192 +1,179 @@
-// index.mjs completo y corregido – Alejandro Ai (con FSM + HubSpot + Email + PDF placeholder)
-
 import express from "express";
 import cors from "cors";
 import bodyParser from "body-parser";
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
-import OpenAI from "openai";
 import { send_lead, send_email } from "./functions.js";
+import OpenAI from "openai";
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-// -------------------------------
-// OpenAI CONFIG (Assistant Id)
-// -------------------------------
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-const ASSISTANT_ID = process.env.OPENAI_ASSISTANT_ID;
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
 
-// -------------------------------
-// File path utilities
-// -------------------------------
+const GPT_MODEL = process.env.GPT_MODEL || "gpt-4.1";
+
+// ---------------------------------------------------------
+// ESTADOS DE CONVERSACIÓN (FSM)
+// ---------------------------------------------------------
+
+const sessions = new Map(); // sessionID → state + data
+
+function getSession(sessionId) {
+  if (!sessions.has(sessionId)) {
+    sessions.set(sessionId, {
+      state: "inicio",
+      name: null,
+      phone: null,
+      interest: null,
+      email: null
+    });
+  }
+  return sessions.get(sessionId);
+}
+
+// ---------------------------------------------------------
+// MATCHERS CORREGIDOS (MUY IMPORTANTES)
+// ---------------------------------------------------------
+
+const phoneRegex =
+  /(\+1\s?)?(\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4})/;
+
+const nameRegex =
+  /\b([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+(?:\s[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)+)\b/;
+
+// ---------------------------------------------------------
+// PROMPT MAESTRO
+// ---------------------------------------------------------
+
+const promptMaestro = {
+  role: "system",
+  content: `
+Eres Alejandro iA, asistente solar de Green Power Tech Store en Puerto Rico.
+Hablas con empatía, claridad y estilo profesional.
+Siempre sigues estrictamente el estado de conversación definido por el backend.
+Nunca pides los datos dos veces si ya existen.`
+};
+
+// ---------------------------------------------------------
+// SERVIR EL FRONTEND
+// ---------------------------------------------------------
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// -------------------------------
-// Middleware
-// -------------------------------
 app.use(cors());
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-// -------------------------------
-// FRONTEND
-// -------------------------------
 app.get("/", (req, res) => {
   res.sendFile("index.html", { root: path.join(__dirname, "public") });
 });
 
-// -------------------------------
-// FSM — Control del flujo conversacional
-// -------------------------------
-const sessionState = {}; // { sessionId: { state: "...", data: {...} } }
+// ---------------------------------------------------------
+// ENDPOINT PRINCIPAL DEL CHAT
+// ---------------------------------------------------------
 
-function getSession(sessionId) {
-  if (!sessionState[sessionId]) {
-    sessionState[sessionId] = {
-      state: "SALUDO",
-      data: {}
-    };
-  }
-  return sessionState[sessionId];
-}
-
-// -------------------------------
-// OPENAI — Run del Assistant
-// -------------------------------
-async function askAssistant(message, threadId) {
-  const thread = threadId
-    ? { id: threadId }
-    : await openai.beta.threads.create();
-
-  if (!threadId) threadId = thread.id;
-
-  await openai.beta.threads.messages.create(threadId, {
-    role: "user",
-    content: message
-  });
-
-  const run = await openai.beta.threads.runs.create(threadId, {
-    assistant_id: ASSISTANT_ID
-  });
-
-  // Esperar respuesta
-  let completed = false;
-  let tries = 0;
-  let runStatus;
-
-  while (!completed && tries < 20) {
-    await new Promise(r => setTimeout(r, 700));
-    runStatus = await openai.beta.threads.runs.retrieve(threadId, run.id);
-    if (runStatus.status === "completed") completed = true;
-    tries++;
-  }
-
-  const messages = await openai.beta.threads.messages.list(threadId, { limit: 1 });
-  const text = messages.data[0].content[0].text.value;
-
-  return { text, threadId };
-}
-
-// -------------------------------
-// ENDPOINT DEL CHAT
-// -------------------------------
 app.post("/chat", async (req, res) => {
+  const { message, sessionId } = req.body;
+
+  // Si no viene sessionId → Generar uno basado en IP
+  const sid = sessionId || req.ip;
+  const session = getSession(sid);
+
+  let reply = "⚠️ Hubo un error inesperado.";
+
   try {
-    const { message, sessionId } = req.body;
-    const session = getSession(sessionId);
+    // --------------------------
+    //  FSM — MANEJO DE ESTADOS
+    // --------------------------
 
-    let reply = "";
-
-    // ---------------------------
-    // FSM — Flujo Lógico
-    // ---------------------------
-
-    if (session.state === "SALUDO") {
-      session.state = "PEDIR_DATOS";
-      reply = "¡Hola! Soy **Alejandro Ai** 🤖☀️. Antes de orientarte, ¿Me compartes tu nombre y número de teléfono?";
-      return res.json({ reply });
+    if (session.state === "inicio") {
+      session.state = "pidiendo_datos";
+      reply = "¡Hola! Soy **Alejandro Ai** 🤖☀️. Antes de orientarte, ¿me compartes tu nombre y número de teléfono?";
     }
 
-    if (session.state === "PEDIR_DATOS") {
-      // Extraer nombre & teléfono (básico)
-      const nameMatch = message.match(/soy ([a-zA-Z ]+)/i);
-      const phoneMatch = message.match(/(\d{10}|\d{3}[- ]?\d{3}[- ]?\d{4})/);
+    else if (session.state === "pidiendo_datos") {
+      const phoneMatch = message.match(phoneRegex);
+      const nameMatch = message.match(nameRegex);
 
-      if (nameMatch) session.data.name = nameMatch[1].trim();
-      if (phoneMatch) session.data.phone = phoneMatch[1];
+      if (nameMatch) session.name = nameMatch[1];
+      if (phoneMatch) session.phone = phoneMatch[0];
 
-      if (!session.data.name || !session.data.phone) {
-        reply = "Perfecto 😊. Solo necesito **tu nombre y número** para continuar.";
-        return res.json({ reply });
+      // Si faltan datos, pedir solo lo que falta
+      if (!session.name || !session.phone) {
+        let missing = [];
+        if (!session.name) missing.push("tu nombre");
+        if (!session.phone) missing.push("tu número");
+
+        reply = `Perfecto 😊. Solo necesito **${missing.join(" y ")}** para continuar.`;
+      } else {
+        // Ya hay todo → enviar lead
+        await send_lead({
+          name: session.name,
+          phone: session.phone,
+          interest: session.interest || "No especificado"
+        });
+
+        session.state = "esperando_interes";
+
+        reply = `¡Excelente, ${session.name}! 🙌  
+Ya tengo tus datos. Ahora cuéntame, ¿qué sistema deseas conocer?
+
+1. 🔆 Energía Solar  
+2. ⚡ Backup para apartamento / oficina  
+3. 🤝 Ayuda para evaluar tu factura`
       }
-
-      // Envío a HubSpot
-      await send_lead({ name: session.data.name, phone: session.data.phone });
-
-      session.state = "ORIENTACION";
-      reply = `¡Gracias ${session.data.name}! 🙌 Ahora sí: ¿Sobre cuál sistema deseas orientación?
-
-1️⃣ Energía Solar Off-Grid
-2️⃣ Backups para apartamentos u oficinas
-3️⃣ Kits portátiles
-4️⃣ Cotización personalizada
-`;
-      return res.json({ reply });
     }
 
-    if (session.state === "ORIENTACION") {
-      if (/4|coti|precio/i.test(message)) {
-        session.state = "PEDIR_EMAIL_COTI";
-        reply = "Perfecto 😄. Para enviarte tu cotización personalizada, ¿Cuál es tu e-mail?";
-        return res.json({ reply });
+    else if (session.state === "esperando_interes") {
+      if (/1|solar|placas/i.test(message)) {
+        session.interest = "solar";
+        session.state = "asesorando";
+        reply = "Perfecto 🌞. Cuéntame: ¿Quieres energía solar **fuera de la red**, o un sistema **híbrido con baterías**?";
       }
-
-      // Dejar que el assistant responda técnicamente
-      const assistantResponse = await askAssistant(message, session.threadId);
-      session.threadId = assistantResponse.threadId;
-
-      return res.json({ reply: assistantResponse.text });
+      else if (/2|backup/i.test(message)) {
+        session.interest = "backup";
+        session.state = "asesorando";
+        reply = "¡Excelente! ⚡ Los backups son perfectos para apartamentos. ¿Cuántos equipos deseas mantener durante un apagón?";
+      }
+      else {
+        reply = "Para ayudarte mejor, dime: **1 solar**, **2 backup**, o **3 ayuda con factura**.";
+      }
     }
 
-    if (session.state === "PEDIR_EMAIL_COTI") {
-      const emailMatch = message.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[A-Z]{2,}/i);
-
-      if (!emailMatch) {
-        return res.json({ reply: "Ese correo no parece válido 🤔. ¿Puedes verificarlo?" });
-      }
-
-      const email = emailMatch[0];
-      session.data.email = email;
-
-      // Enviar PDF / Cotización (placeholder)
-      await send_email({
-        to: email,
-        subject: "Tu cotización — Green Power Tech Store",
-        text: "Aquí está tu cotización solicitada. (PDF en desarrollo)"
+    else if (session.state === "asesorando") {
+      // Aquí entra la IA para respuesta profesional
+      const completion = await openai.chat.completions.create({
+        model: GPT_MODEL,
+        messages: [
+          promptMaestro,
+          { role: "user", content: message },
+          { role: "assistant", content: "Responde como Alejandro iA." }
+        ],
+        temperature: 0.7
       });
 
-      session.state = "ORIENTACION";
-      return res.json({ reply: `¡Listo! 📩 Te envié la cotización a **${email}**. ¿Quieres que te explique alguno de los sistemas?` });
+      reply = completion.choices[0].message.content;
     }
 
-    // fallback
-    reply = "Estoy aquí para ayudarte ☀️. ¿En qué más te puedo asistir?";
-    res.json({ reply });
-
   } catch (err) {
-    console.error("Chat error =>", err);
-    res.json({ reply: "⚠️ Ocurrió un error inesperado en Alejandro Ai." });
+    console.error("❌ Error en /chat:", err);
+    reply = "⚠️ Ocurrió un error mientras procesaba tu solicitud.";
   }
+
+  res.json({ reply });
 });
 
-// -------------------------------
+// ---------------------------------------------------------
 // INICIAR SERVIDOR
-// -------------------------------
+// ---------------------------------------------------------
+
 app.listen(PORT, () => {
   console.log(`🚀 Alejandro Ai activo en el puerto ${PORT}`);
 });
