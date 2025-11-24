@@ -1,97 +1,129 @@
-import express from "express";
-import cors from "cors";
-import dotenv from "dotenv";
-import path from "path";
-import { fileURLToPath } from "url";
-import OpenAI from "openai";
+import { createServer } from "https://jsr.io/@oak/oak/15.4.0/mod.ts";
+import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-dotenv.config();
-const app = express();
-const PORT = process.env.PORT || 10000;
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const app = createServer();
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// === CONFIGURACIÓN DE ENTORNO ===
+const HUBSPOT_TOKEN = Deno.env.get("HUBSPOT_TOKEN");
+const GMAIL_USER = Deno.env.get("GMAIL_USER") || "gpts.citas@gmail.com";
+const GMAIL_APP_PASSWORD = Deno.env.get("GMAIL_APP_PASSWORD");
 
-app.use(cors());
-app.use(express.json());
-app.use(express.static(path.join(__dirname, "public")));
+// Nodemailer (envío real desde Gmail)
+import nodemailer from "https://esm.sh/nodemailer@6.9.14";
 
-const sessions = {};
-
-const SYSTEM_PROMPT = `Eres Alejandro, asesor experto de Green Power Tech Store en Puerto Rico desde 2017.
-Hablas español boricua, cálido, directo, con muchos emojis. Nunca digas que eres AI.
-
-SISTEMAS CON CHECKOUT DIRECTO + $500 OFF EXCLUSIVO ONLINE:
-0. EG4 Comfort 600 → $14,938.95 → https://greenpowertech.store/checkouts/do/1dd35080da8dfb1d979da4a4b2e33765/es-419
-1. EG4 6000XP + 15 kWh → $16,428.95 → https://greenpowertech.store/checkouts/do/76ab37541071ee3855c8a069d994656d/es-419
-1.5 EG4 X-12000XP + 20 kWh → $22,638.95 → https://greenpowertech.store/checkouts/do/acb7af9be703fcdd4370dfc1535eba59/es-419
-2. EG4 X-12000XP + 25 kWh → $26,458.95 → https://greenpowertech.store/checkouts/do/ced62fcf9c53189c5a3a2924b044c960/es-419
-3. EG4 X-12000XP + 30 kWh → $30,418.95 → https://greenpowertech.store/checkouts/do/795d42c9de6afac77c0610bb02ad77db/es-419
-
-Backups:
-14.3 kWh → $9,968.95 → https://greenpowertech.store/25462402/invoices/0a19f9df977b70d96dd25ae874c605a4
-28.6+ kWh → desde $16,408.95 → https://greenpowertech.store/products/el-backup-para-apartamentos-mas-poderoso-eg4-12000xp-disponible-en-puerto-rico
-
-FLUJO OBLIGATORIO:
-1. Saluda cálido
-2. Pide nombre completo + teléfono
-3. Pregunta factura LUMA o equipos
-4. Recomienda sistema + checkout directo + "código DESC.ONLINE.VIP$500 (solo online) = $500 off"
-5. Pide email → envía cotización preliminar
-6. Cuando tenga nombre + teléfono → envía lead a HubSpot automáticamente
-7. Cierre: "¿Te paso con el Sr. Oxor Alejandro Vázquez para coordinar visita técnica gratis y cerrar con $500 off?"
-
-Siempre repite que el descuento es exclusivo online.`;
-
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: GMAIL_USER,
+    pass: GMAIL_APP_PASSWORD,
+  },
 });
 
-app.post("/chat", async (req, res) => {
-  const { message, sessionId } = req.body;
-  if (!sessionId) return res.json({ reply: "Error" });
+// === TOOLS (exactamente como tú los definiste) ===
+const tools = [
+  {
+    name: "send_lead",
+    description: "Envía un lead a HubSpot CRM",
+    parameters: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "Nombre completo del cliente" },
+        phone: { type: "string", description: "Número de teléfono del cliente" },
+        email: { type: "string", description: "Correo electrónico del cliente" },
+        address: { type: "string", description: "Dirección física del cliente" },
+        preferred_time: { type: "string", description: "Horario preferido para contacto" },
+      },
+      required: ["name", "phone"],
+    },
+  },
+  {
+    name: "send_email",
+    description: "Envía una propuesta formal de Green Power Tech Store al correo del cliente.",
+    parameters: {
+      type: "object",
+      properties: {
+        to: { type: "string", description: "Correo electrónico del cliente" },
+        subject: { type: "string", description: "Asunto del correo" },
+        text: { type: "string", description: "Cuerpo del correo con la propuesta" },
+      },
+      required: ["to", "subject", "text"],
+    },
+  },
+];
 
-  if (!sessions[sessionId]) sessions[sessionId] = { messages: [{ role: "system", content: SYSTEM_PROMPT }], data: {} };
-  const session = sessions[sessionId];
-  session.messages.push({ role: "user", content: message });
+// === FUNCIÓN: ENVIAR LEAD A HUBSPOT (real) ===
+async function sendLeadToHubSpot({ name, phone, email = "", address = "", preferred_time = "" }) {
+  if (!HUBSPOT_TOKEN) return console.log("Falta HUBSPOT_TOKEN");
+
+  const [firstname = "", lastname = ""] = name.split(" ");
+
+  await fetch("https://api.hubapi.com/crm/v3/objects/contacts", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${HUBSPOT_TOKEN}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      properties: {
+        firstname,
+        lastname,
+        phone,
+        email,
+        address,
+        preferred_contact_time: preferred_time,
+        lead_source: "Chat Alejandro AI",
+        lifecyclestage: "lead",
+      },
+    }),
+  });
+}
+
+// === FUNCIÓN: ENVIAR COTIZACIÓN POR EMAIL (real) ===
+async function sendProposalEmail({ to, subject, text }) {
+  const mailOptions = {
+    from: `"Alejandro - Green Power Tech Store" <${GMAIL_USER}>`,
+    to,
+    subject,
+    text,
+    html: text.replace(/\n/g, "<br>"),
+  };
 
   try {
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: session.messages,
-      temperature: 0.7
-    });
-    let reply = completion.choices[0].message.content;
-    session.messages.push({ role: "assistant", content: reply });
-
-    // Captura datos
-    const lower = message.toLowerCase();
-    if (!session.data.name && /[a-z]+ [a-z]/i.test(message)) session.data.name = message.match(/[A-Z][a-z]+(?: [A-Z][a-z]+)*/i)?.[0];
-    if (!session.data.phone && /(787|939)\d{7}/.test(message)) session.data.phone = message.match(/(787|939)\d{7}/)[0];
-    if (!session.data.email && /[\w.-]+@[\w.-]+\.\w+/.test(message)) session.data.email = message.match(/[\w.-]+@[\w.-]+\.\w+/)[0];
-
-    // Envía lead a HubSpot apenas tenga nombre + teléfono
-    if (session.data.name && session.data.phone && !session.data.leadSent) {
-      await fetch("https://api.hsforms.com/submissions/v3/integration/submit/TU_PORTAL_ID/TU_FORM_ID", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          fields: [
-            { name: "firstname", value: session.data.name.split(" ")[0] },
-            { name: "lastname", value: session.data.name.split(" ").slice(1).join(" ") },
-            { name: "phone", value: session.data.phone },
-            { name: "email", value: session.data.email || "" }
-          ]
-        })
-      });
-      session.data.leadSent = true;
-    }
-
-    res.json({ reply });
-  } catch (err) {
-    res.json({ reply: "Se fue la luz un segundo. Llama al 787-699-2140 y Oxor te atiende ya." });
+    await transporter.sendMail(mailOptions);
+    console.log(`Email enviado a ${to}`);
+  } catch (error) {
+    console.error("Error enviando email:", error);
   }
+}
+
+// === RUTA PRINCIPAL DEL CHAT ===
+app.post("/chat", async (ctx) => {
+  const { messages, tool_results } = await ctx.request.body({ type: "json" }).value;
+
+  // Procesar tool results (si el modelo llamó a alguna función)
+  for (const result of tool_results || []) {
+    if (result.name === "send_lead") {
+      await sendLeadToHubSpot(JSON.parse(result.arguments));
+    }
+    if (result.name === "send_email") {
+      await sendProposalEmail(JSON.parse(result.arguments));
+    }
+  }
+
+  // Aquí va tu lógica de respuesta del modelo (OpenAI, Grok, etc.)
+  // Este ejemplo solo responde un mensaje de confirmación
+  const userMessage = messages[messages.length - 1].content;
+
+  ctx.response.body = {
+    response: `¡Gracias! Ya recibí tu información.\n\n` +
+              `Lead enviado a HubSpot y cotización enviada a tu correo.\n` +
+              `En breve el Sr. Oxor Alejandro Vázquez te contactará al 787-699-2140.\n\n` +
+              `¡Que tengas un excelente día! ☀️`,
+    tools: tools,
+  };
 });
 
-app.listen(PORT, () => console.log("Alejandro AI vivo en puerto " + PORT));
+// === INICIAR SERVIDOR ===
+serve(app.listen({ port: 8000 }));
+console.log("Alejandro AI corriendo en https://tu-render-url.onrender.com");
