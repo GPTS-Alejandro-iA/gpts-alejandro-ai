@@ -1,12 +1,26 @@
 import express from "express";
 import fetch from "node-fetch";
 import nodemailer from "nodemailer";
+import path from "path";
+import { fileURLToPath } from "url";
 import "dotenv/config";
 
+// =====================
+// CONFIG EXPRESS + STATIC
+// =====================
 const app = express();
 app.use(express.json({ limit: "10mb" }));
 
-// === CONFIG ===
+// Para resolver __dirname en ES Modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Servir carpeta /public que contiene index.html
+app.use(express.static(path.join(__dirname, "public")));
+
+// =====================
+// CONFIG
+// =====================
 const HUBSPOT_TOKEN = process.env.HUBSPOT_TOKEN;
 const GMAIL_USER = process.env.GMAIL_USER || "gpts.citas@gmail.com";
 const GMAIL_PASS = process.env.GMAIL_APP_PASSWORD;
@@ -16,7 +30,9 @@ const transporter = nodemailer.createTransport({
   auth: { user: GMAIL_USER, pass: GMAIL_PASS },
 });
 
-// === TOOLS (exactamente como tú los definiste) ===
+// =====================
+// TOOLS
+// =====================
 const tools = [
   {
     name: "send_lead",
@@ -48,7 +64,9 @@ const tools = [
   },
 ];
 
-// === ENVIAR LEAD A HUBSPOT ===
+// =====================
+// FUNCIONES
+// =====================
 async function sendLeadToHubSpot(data) {
   if (!HUBSPOT_TOKEN) return console.log("Falta HUBSPOT_TOKEN");
   const [firstname, ...rest] = data.name.split(" ");
@@ -74,7 +92,6 @@ async function sendLeadToHubSpot(data) {
   });
 }
 
-// === ENVIAR EMAIL ===
 async function sendProposalEmail({ to, subject, text }) {
   await transporter.sendMail({
     from: `"Alejandro - Green Power Tech Store" <${GMAIL_USER}>`,
@@ -86,7 +103,9 @@ async function sendProposalEmail({ to, subject, text }) {
   console.log(`Cotización enviada a ${to}`);
 }
 
-// === RUTA CHAT ===
+// =====================
+// RUTA CHAT
+// =====================
 app.post("/chat", async (req, res) => {
   const { tool_calls } = req.body;
 
@@ -99,10 +118,22 @@ app.post("/chat", async (req, res) => {
   }
 
   res.json({
-    response: "¡Perfecto! Lead enviado a HubSpot y cotización enviada al correo.\n\nEl Sr. Oxor te contactará pronto al 787-699-2140.\n\n¡Excelente día! ☀️",
-    tools,
+    reply: "¡Perfecto! Lead enviado a HubSpot y cotización enviada.\n\nUn asesor te contactará pronto. ☀️",
   });
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Alejandro AI corriendo en puerto ${PORT}`));
+// =====================
+// FALLBACK PARA CUALQUIER RUTA → index.html
+// NECESARIO PARA QUE NO DE CANNOT GET /
+// =====================
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
+// =====================
+// INICIAR SERVIDOR
+// =====================
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, () =>
+  console.log(`Alejandro AI corriendo en puerto ${PORT}`)
+);
