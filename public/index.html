@@ -1,160 +1,65 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Green Power Tech Store Chat</title>
-<style>
-  body {
-    font-family: 'Helvetica', sans-serif;
-    background-color: #f2f6fa;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    margin: 0;
-  }
-  #chat-container {
-    width: 400px;
-    max-width: 90%;
-    height: 600px;
-    background-color: #fff;
-    border-radius: 15px;
-    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
-  #chat-header {
-    background: linear-gradient(90deg, #00aaff, #0055cc);
-    color: #fff;
-    padding: 15px;
-    font-weight: bold;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 16px;
-  }
-  #chat-header span { font-size: 20px; }
-  #chat-messages {
-    flex: 1;
-    padding: 15px;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-  .message {
-    padding: 10px 15px;
-    border-radius: 20px;
-    max-width: 80%;
-    word-wrap: break-word;
-  }
-  .bot {
-    background-color: #e0f0ff;
-    align-self: flex-start;
-  }
-  .user {
-    background-color: #d0ffd8;
-    align-self: flex-end;
-  }
-  #chat-input-container {
-    display: flex;
-    padding: 10px;
-    border-top: 1px solid #ccc;
-    gap: 10px;
-  }
-  #chat-input {
-    flex: 1;
-    padding: 10px 15px;
-    border-radius: 25px;
-    border: 1px solid #ccc;
-    font-size: 14px;
-    outline: none;
-  }
-  #send-btn {
-    background-color: #00aaff;
-    color: #fff;
-    border: none;
-    padding: 10px 18px;
-    border-radius: 50%;
-    cursor: pointer;
-    font-size: 16px;
-  }
-  #send-btn:hover {
-    background-color: #0077aa;
-  }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Alejandro - Green Power Tech</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { background:#075e54; height:100vh; display:flex; align-items:flex-end; justify-content:center; font-family:-apple-system,system-ui,sans-serif; }
+    #chat { width:100%; max-width:500px; height:100vh; background:#ece5dd; display:flex; flex-direction:column; }
+    #header { background:#075e54; color:white; padding:15px; text-align:center; font-size:18px; }
+    #messages { flex:1; padding:10px; overflow-y:auto; }
+    .msg { max-width:80%; margin:8px; padding:10px 14px; border-radius:10px; line-height:1.4; word-wrap:break-word; }
+    .user { background:#d9fdd3; align-self:flex-end; margin-left:auto; border-bottom-right-radius:0; }
+    .bot { background:white; align-self:flex-start; border-bottom-left-radius:0; }
+    #input-area { display:flex; background:#f0f0f0; padding:10px; }
+    #input { flex:1; padding:12px; border:none; border-radius:25px; font-size:16px; }
+    #send { background:#075e54; color:white; border:none; width:50px; height:50px; border-radius:50%; margin-left:8px; font-size:20px; cursor:pointer; }
+  </style>
 </head>
 <body>
-
-<div id="chat-container">
-  <div id="chat-header">
-    <span>☀️</span>
-    ¡Bienvenido a Green Power Tech Store!
-    <span>🔋</span>
+  <div id="chat">
+    <div id="header">Alejandro - Green Power Tech Store</div>
+    <div id="messages">
+      <div class="bot msg">¡Buen día! Aquí Alejandro de Green Power Tech Store<br>¿En qué te ayudo con tu independencia energética?</div>
+    </div>
+    <div id="input-area">
+      <input type="text" id="input" placeholder="Escribe aquí..." autocomplete="off">
+      <button id="send">Send</button>
+    </div>
   </div>
-  <div id="chat-messages"></div>
-  <div id="chat-input-container">
-    <input type="text" id="chat-input" placeholder="Escribe tu mensaje..." />
-    <button id="send-btn">➡️</button>
-  </div>
-</div>
 
-<script>
-const chatMessages = document.getElementById("chat-messages");
-const chatInput = document.getElementById("chat-input");
-const sendBtn = document.getElementById("send-btn");
+  <script>
+    const msgs = document.getElementById("messages");
+    const input = document.getElementById("input");
+    const send = document.getElementById("send");
+    const sessionId = Date.now() + Math.random();
 
-// Generar sessionId único para el usuario
-const sessionId = Date.now().toString();
+    const add = (text, type) => {
+      const div = document.createElement("div");
+      div.className = "msg " + type;
+      div.innerHTML = text.replace(/\n/g, "<br>");
+      msgs.appendChild(div);
+      msgs.scrollTop = msgs.scrollHeight;
+    };
 
-function addMessage(text, sender) {
-  const msgDiv = document.createElement("div");
-  msgDiv.classList.add("message", sender);
-  msgDiv.innerHTML = text;
-  chatMessages.appendChild(msgDiv);
-  chatMessages.scrollTop = chatMessages.scrollHeight;
-}
+    const enviar = async () => {
+      const txt = input.value.trim();
+      if (!txt) return;
+      add(txt, "user");
+      input.value = "";
+      const res = await fetch("/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: txt, sessionId })
+      });
+      const data = await res.json();
+      add(data.reply, "bot");
+    };
 
-// Enviar mensaje
-async function sendMessage() {
-  const message = chatInput.value.trim();
-  if (!message) return;
-  addMessage(message, "user");
-  chatInput.value = "";
-
-  try {
-    const res = await fetch("/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message, sessionId })
-    });
-    const data = await res.json();
-    addMessage(data.reply, "bot");
-  } catch (err) {
-    addMessage("⚠️ Error de conexión con el chat.", "bot");
-  }
-}
-
-// Evento botón
-sendBtn.addEventListener("click", sendMessage);
-// Enviar con Enter
-chatInput.addEventListener("keydown", (e) => {
-  if (e.key === "Enter") sendMessage();
-});
-
-// Mensaje inicial al cargar la página
-window.addEventListener("load", async () => {
-  try {
-    const res = await fetch("/");
-    // No mostramos contenido del HTML, solo usamos para inicializar
-    addMessage("👋 ¡Hola! Soy Alejandro Ai, listo para ayudarte. 🌞", "bot");
-  } catch {
-    addMessage("⚠️ Error al cargar saludo inicial.", "bot");
-  }
-});
-</script>
-
+    send.onclick = enviar;
+    input.addEventListener("keypress", e => e.key === "Enter" && enviar());
+  </script>
 </body>
 </html>
