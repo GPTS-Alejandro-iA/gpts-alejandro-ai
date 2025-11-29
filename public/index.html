@@ -48,14 +48,15 @@
     }
     #title { font-size: 18px; font-weight: 600; }
     #subtitle { font-size: 13px; opacity: 0.9; }
-    #online { font-size: 12px; color: #7fffd4; }
+    #online { font-size: 12px; color: #7fffd4; margin-left:auto; }
 
     #messages { 
       flex: 1; 
       padding: 16px; 
       overflow-y: auto; 
-      background: url('https://i.imgur.com/3v9v3uG.jpg') repeat; /* fondo WhatsApp clásico */
+      background: url('https://i.imgur.com/3v9v3uG.jpg') repeat;
       background-size: 400px;
+      background-color: #0b141a;
     }
     .msg { 
       max-width: 78%; 
@@ -65,6 +66,7 @@
       line-height: 1.45; 
       position: relative; 
       animation: fadeIn 0.3s ease;
+      word-wrap: break-word;
     }
     .bot { 
       background: #ffffff; 
@@ -77,7 +79,6 @@
       color: white; 
       align-self: flex-end; 
       border-bottom-right-radius: 4px; 
-      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
     }
     .time { font-size: 11px; opacity: 0.7; margin-top: 4px; text-align: right; }
 
@@ -115,6 +116,9 @@
     #send:hover { background: #008f6f; transform: scale(1.08); }
 
     @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:none; } }
+
+    /* OCULTAR EL SALUDO AUTOMÁTICO DE OPENAI */
+    .msg:nth-child(1):nth-last-child(-n+2) { display: none !important; }
   </style>
 </head>
 <body>
@@ -125,21 +129,10 @@
         <div id="title">Alejandro</div>
         <div id="subtitle">Green Power Tech Store</div>
       </div>
-      <div style="margin-left:auto; text-align:right;">
-        <div id="online">en línea</div>
-      </div>
+      <div id="online">en línea</div>
     </div>
 
-    <div id="messages">
-      <div class="bot msg">
-        <strong>¡Hola!</strong> Soy Alejandro, experto en energía renovable de <strong>Green Power Tech Store</strong><br><br>
-        Estoy aquí para orientarte sobre todos nuestros sistemas y ayudarte en el proceso de compra o preparación de una cotización preliminar para solicitar financiamiento.<br><br>
-        ¿Cuál de nuestros sistemas te interesa conocer más?<br><br>
-        <strong>1.</strong> Energía Solar Fuera de la red para residencias o negocios<br>
-        <strong>2.</strong> Backups de Alta Capacidad para apartamentos u oficinas
-        <div class="time">ahora</div>
-      </div>
-    </div>
+    <div id="messages"></div>
 
     <div id="input-area">
       <input type="text" id="input" placeholder="Escribe tu mensaje..." autocomplete="off">
@@ -147,38 +140,47 @@
     </div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/@openai/assistants@latest/dist/assistants.min.js"></script>
   <script>
-    const msgs = document.getElementById("messages");
+    const messagesDiv = document.getElementById("messages");
     const input = document.getElementById("input");
     const send = document.getElementById("send");
-    const sessionId = Date.now();
 
-    const add = (text, type) => {
+    const assistant = new OpenAIAssistant({
+      assistantId: "asst_XXXXXXXXXXXXXXXXXXXXXXXX", // ← PON AQUÍ TU ID REAL DEL ASSISTANT
+      trigger: "none",                          // ← IMPORTANTE: evita saludo automático
+      theme: "dark"
+    });
+
+    assistant.onMessage = (msg) => {
       const div = document.createElement("div");
-      div.className = "msg " + type;
-      div.innerHTML = text.replace(/\n/g, "<br>") + 
+      div.className = `msg ${msg.role === "assistant" ? "bot" : "user"}`;
+      div.innerHTML = msg.content[0].text.value.replace(/\n/g, "<br>") +
         `<div class="time">${new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>`;
-      msgs.appendChild(div);
-      msgs.scrollTop = msgs.scrollHeight;
+      messagesDiv.appendChild(div);
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
     };
 
-    const enviar = async () => {
-      const txt = input.value.trim();
-      if (!txt) return;
-      add(txt, "user");
-      input.value = "";
+    // SALUDO INICIAL CONTROLADO POR NOSOTROS (el del Prompt Maestro)
+    setTimeout(() => {
+      assistant.addMessage({
+        role: "assistant",
+        content: [{ type: "text", text: `¡Hola! Soy Alejandro, experto en energía renovable de Green Power Tech Store 🌞
 
-      try {
-        const res = await fetch("/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: txt, sessionId })
-        });
-        const data = await res.json();
-        add(data.reply || data.response || "Disculpa, no pude procesar tu mensaje.", "bot");
-      } catch (e) {
-        add("Error de conexión. Reintentando en segundos...", "bot");
-      }
+Estoy aquí para orientarte sobre todos nuestros sistemas y ayudarte en el proceso de compra o preparación de una cotización preliminar para solicitar financiamiento.
+
+¿Cuál de nuestros sistemas te interesa conocer más?
+
+1. Energía Solar Fuera de la red para residencias o negocios
+2. Backups de Alta Capacidad para apartamentos u oficinas` }]
+      });
+    }, 600);
+
+    const enviar = () => {
+      const texto = input.value.trim();
+      if (!texto) return;
+      assistant.addMessage({ role: "user", content: [{ type: "text", text: texto }] });
+      input.value = "";
     };
 
     send.onclick = enviar;
