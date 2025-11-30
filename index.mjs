@@ -8,19 +8,18 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// SIRVE EL INDEX.HTML Y TODOS LOS ARCHIVOS ESTÁTICOS
-app.use(express.static('.'));
-
-// RUTA DE RESPALDO POR SI ALGUIEN ENTRA DIRECTO A /
-app.get('/', (req, res) => {
-  res.sendFile('index.html', { root: '.' });
+// SIRVE TODO DESDE LA CARPETA public (tu index.html está ahí)
+app.use(express.static('public'));
+app.get('*', (req, res) => {
+  res.sendFile('index.html', { root: 'public' });
 });
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-const ASSISTANT_ID = "asst_XXXXXXXXXXXXXXXXXXXXXXXX"; // ← TU ID REAL AQUÍ
+// ⚠️ AQUÍ PON TU ASSISTANT ID REAL (ej: asst_abc123xyz...)
+const ASSISTANT_ID = "asst_XXXXXXXXXXXXXXXXXXXXXXXX"; // ← CAMBIA ESTO
 
 const sessions = new Map();
 
@@ -29,6 +28,7 @@ app.post('/chat', async (req, res) => {
 
   try {
     let threadId = sessions.get(sessionId);
+
     if (!threadId) {
       const thread = await openai.beta.threads.create();
       threadId = thread.id;
@@ -55,8 +55,8 @@ app.post('/chat', async (req, res) => {
       res.json({ reply: "Estoy procesando tu mensaje, dame un segundo…" });
     }
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ reply: "Error temporal, intenta de nuevo en segundos." });
+    console.error("Error:", error.message);
+    res.status(500).json({ reply: "Error temporal. Intenta de nuevo en segundos." });
   }
 });
 
