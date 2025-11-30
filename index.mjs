@@ -7,15 +7,21 @@ dotenv.config();
 const app = express();
 app.use(cors());
 app.use(express.json());
-app.use(express.static('.')); // sirve index.html
+
+// SIRVE EL INDEX.HTML Y TODOS LOS ARCHIVOS ESTÁTICOS
+app.use(express.static('.'));
+
+// RUTA DE RESPALDO POR SI ALGUIEN ENTRA DIRECTO A /
+app.get('/', (req, res) => {
+  res.sendFile('index.html', { root: '.' });
+});
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-const ASSISTANT_ID = "asst_TU_ID_REAL_AQUI"; // ← PON AQUÍ TU ID DEL ASSISTANT
+const ASSISTANT_ID = "asst_XXXXXXXXXXXXXXXXXXXXXXXX"; // ← TU ID REAL AQUÍ
 
-// Mapa de sesiones (thread_id por sessionId del frontend)
 const sessions = new Map();
 
 app.post('/chat', async (req, res) => {
@@ -23,21 +29,17 @@ app.post('/chat', async (req, res) => {
 
   try {
     let threadId = sessions.get(sessionId);
-
-    // Si no existe thread → crear uno nuevo
     if (!threadId) {
       const thread = await openai.beta.threads.create();
       threadId = thread.id;
       sessions.set(sessionId, threadId);
     }
 
-    // 1. Añadir mensaje del usuario
     await openai.beta.threads.messages.create(threadId, {
       role: "user",
       content: message
     });
 
-    // 2. Crear run y esperar respuesta (SIN tocar el thread mientras corre)
     const run = await openai.beta.threads.runs.createAndPoll(threadId, {
       assistant_id: ASSISTANT_ID,
     });
@@ -50,12 +52,11 @@ app.post('/chat', async (req, res) => {
 
       res.json({ reply: assistantMsg.content[0].text.value });
     } else {
-      res.json({ reply: "Lo siento, estoy teniendo problemas técnicos. Intenta de nuevo en unos segundos." });
+      res.json({ reply: "Estoy procesando tu mensaje, dame un segundo…" });
     }
-
   } catch (error) {
     console.error(error);
-    res.status(500).json({ reply: "Error interno. Reintentando…" });
+    res.status(500).json({ reply: "Error temporal, intenta de nuevo en segundos." });
   }
 });
 
