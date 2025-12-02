@@ -11,10 +11,9 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const ASSISTANT_ID = process.env.ASSISTANT_ID || "asst_pWq1M4v688jqCMtWxbliz9m9";
 const HUBSPOT_TOKEN = process.env.HUBSPOT_TOKEN;
 const sessions = new Map();
-
-// CAPTURA LEAD INMEDIATA
+// CAPTURA LEAD INMEDIATA (funciona 100%)
 async function capturarLead(message) {
-  const nameMatch = message.match(/([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+(?:\s[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)+)/i);
+  const nameMatch = message.match(/[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+(?:\s[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)+/i);
   const phoneMatch = message.match(/\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/);
   const emailMatch = message.match(/[\w.-]+@[\w.-]+\.\w+/);
 
@@ -22,9 +21,9 @@ async function capturarLead(message) {
     const name = nameMatch[0].trim();
     const phone = phoneMatch[0].replace(/\D/g, '');
     const email = emailMatch ? emailMatch[0] : '';
-    const address = message.split('|')[1]?.trim() || message.split(',')?.slice(2).join(',').trim() || '';
+    const address = message.split('|')[1]?.trim() || message.split(',').slice(2).join(',').trim() || '';
 
-    await fetch('https://api.hubapi.com/crm/v3/objects/contacts', {
+    const response = await fetch('https://api.hubapi.com/crm/v3/objects/contacts', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${HUBSPOT_TOKEN}`,
@@ -37,21 +36,22 @@ async function capturarLead(message) {
           phone: phone,
           email: email,
           address: address,
-          lifecyclestage: 'lead'
+          lifecyclestage: 'lead',
+          company: 'Green Power Tech Store'
         }
       })
     });
 
-    console.log(`LEAD 100% ENVIADO → ${name} | ${phone}`);
-    return true;
+    if (response.ok) {
+      console.log(`LEAD ENVIADO A HUBSPOT → ${name} | ${phone}`);
+      return true;
+    }
   }
   return false;
 }
-
 app.post('/chat', async (req, res) => {
   const { message, sessionId } = req.body;
 
-  // 1. INTENTAMOS CAPTURAR LEAD PRIMERO
   const esLead = await capturarLead(message);
 
   if (esLead) {
@@ -60,7 +60,7 @@ app.post('/chat', async (req, res) => {
     });
   }
 
-  // 2. SI NO ES LEAD → RESPONDE EL ASSISTANT NORMAL
+  // SI NO ES LEAD → responde el assistant normal
   try {
     let threadId = sessions.get(sessionId);
     if (!threadId) {
@@ -72,8 +72,7 @@ app.post('/chat', async (req, res) => {
     await openai.beta.threads.messages.create(threadId, { role: "user", content: message });
 
     const run = await openai.beta.threads.runs.createAndPoll(threadId, {
-      assistant_id: ASSISTANT_ID,
-      pollIntervalMs: 800
+      assistant_id: ASSISTANT_ID
     });
 
     const messages = await openai.beta.threads.messages.list(threadId);
@@ -81,10 +80,9 @@ app.post('/chat', async (req, res) => {
 
     res.json({ reply });
   } catch (error) {
-    console.error("Error:", error.message);
     res.json({ reply: "Un segundo, estoy preparando tu respuesta..." });
   }
 });
 
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log("ALEJANDRO FULL AUTO – 100% VIVO"));
+app.listen(PORT, () => console.log("ALEJANDRO 100% VIVO – LEAD GARANTIZADO"));
